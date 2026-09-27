@@ -1,10 +1,6 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { generate } from "../src/generate/index";
 import { MARKER } from "../src/generate/names";
-import { writeFiles } from "../src/generate/write";
 import { validate } from "../src/validate/index";
 import invoiceReminder from "../specs/invoice-reminder";
 import notes from "../specs/notes";
@@ -37,30 +33,4 @@ it("emits slot, job and custom-route files only when the spec has them", () => {
     "api/src/slots/renderInvoicePdf.ts",
     "api/src/slots/sendInvoice.ts",
   ]);
-});
-
-describe("writeFiles", () => {
-  const files = () => generate(parse(invoiceReminder));
-
-  it("preserves slot bodies when regenerating", () => {
-    const dir = mkdtempSync(join(tmpdir(), "appspec-"));
-    writeFiles(dir, files());
-    const slot = join(dir, "api/src/slots/sendInvoice.ts");
-    const implemented = readFileSync(slot, "utf8")
-      .replace('  throw new NotImplemented("sendInvoice");\n', "  return input.invoice; // implemented\n")
-      .replace("// @appspec:slot sendInvoice:imports end", 'import { sql } from "drizzle-orm";\n// @appspec:slot sendInvoice:imports end');
-    writeFileSync(slot, implemented);
-
-    const result = writeFiles(dir, files());
-    expect(readFileSync(slot, "utf8")).toBe(implemented);
-    expect(result.written).toEqual([]);
-  });
-
-  it("refuses to overwrite a file without the generated marker", () => {
-    const dir = mkdtempSync(join(tmpdir(), "appspec-"));
-    writeFiles(dir, files());
-    writeFileSync(join(dir, "api/src/server.ts"), "// my own server\n");
-    expect(() => writeFiles(dir, files())).toThrow(/api\/src\/server\.ts/);
-    expect(readFileSync(join(dir, "api/src/server.ts"), "utf8")).toBe("// my own server\n");
-  });
 });

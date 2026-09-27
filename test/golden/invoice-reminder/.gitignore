@@ -1,0 +1,4 @@
+# @appspec:generated — do not edit
+node_modules
+dist
+.env

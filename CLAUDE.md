@@ -280,3 +280,25 @@ api/src/lib/{errors,load,context}.ts    api/src/slots/<slotId>.ts      api/src/i
   regions as backend slots; the stub renders `<NotImplemented>` with the intent.
 - **Money** is shown and edited with 2 decimals (minor units ÷ 100); currencies with other
   exponents would need a slot or a future IR change.
+
+### 2026-09-27 — milestone 6 (golden tests, regeneration)
+- **Golden output:** `test/golden/<spec>/<path>` holds every generated file for both reference
+  specs (`toMatchFileSnapshot`), plus a test that fails on golden files the generator no longer
+  produces. After an intended generator change: `npx vitest run -u`, review the diff, delete any
+  reported stale golden files. `tsconfig.json` excludes `test/golden`.
+- **Regions and stubs** live in `src/generate/regions.ts`. Stub bodies are exact, id-only strings
+  (page slots read their intent from a generated `INTENT` const outside the region), so the writer
+  can tell an untouched slot from written code.
+- **Writer rules** (`src/generate/write.ts`), all checked before anything is written:
+  - a target file without the marker is user-owned → refuse;
+  - an existing region that holds code and would disappear → refuse;
+  - region bodies are carried over; unchanged files aren't rewritten;
+  - files listed in `.appspec/manifest.json` (the last run's output) that the spec no longer
+    produces are deleted, unless a region holds code (kept, reported as orphaned, stays in the
+    manifest) or the marker was removed (the user took the file over).
+- **The marker alone never proves a file is generated:** `cp .env.example .env` copies it. An
+  early version deleted `.env` on regenerate; the manifest fixed it, and a regression test covers it.
+- `test/regenerate.test.ts` runs the full cycle: implement backend + frontend slots, add
+  user-owned files (incl. `.env` and a hand-written migration), change the spec (new field,
+  reworded intent, two slots removed), regenerate, and check preservation, propagation,
+  deletion, orphan reporting and idempotence.

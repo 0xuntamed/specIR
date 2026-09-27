@@ -1,15 +1,15 @@
+// @appspec:generated — do not edit
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["vite/client"]
   },
-  "include": ["src", "specs", "test"],
-  "exclude": ["test/golden"]
+  "include": ["src"]
 }

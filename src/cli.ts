@@ -36,5 +36,9 @@ if (command === "validate") {
 } else {
   const files = generate(spec);
   const result = writeFiles(resolve(out!), files);
-  console.log(`generated ${files.size} files into ${out} (${result.written.length} written, ${result.unchanged.length} unchanged)`);
+  for (const path of result.deleted) console.log(`deleted ${path} (no longer in the spec)`);
+  for (const path of result.orphaned) console.log(`warning: kept ${path}: no longer in the spec, but its slot regions hold code`);
+  const counts = [`${result.written.length} written`, `${result.unchanged.length} unchanged`];
+  if (result.deleted.length > 0) counts.push(`${result.deleted.length} deleted`);
+  console.log(`generated ${files.size} files into ${out} (${counts.join(", ")})`);
 }

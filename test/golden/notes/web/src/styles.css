@@ -1,0 +1,90 @@
+/* @appspec:generated — do not edit */
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --text: #1c1c1a;
+  --muted: #6b6b66;
+  --border: #e3e3de;
+  --accent: #2f5bea;
+  --accent-text: #ffffff;
+  --danger: #c2332b;
+  --radius: 8px;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615;
+    --surface: #1f1f1d;
+    --text: #ececea;
+    --muted: #a0a09a;
+    --border: #33332f;
+    --accent: #7c9bff;
+    --accent-text: #0e0e0d;
+    --danger: #ff7b72;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: var(--accent); }
+h1 { font-size: 1.5rem; margin: 0; }
+h2 { font-size: 1.1rem; margin: 2rem 0 0.75rem; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+main.container { padding-top: 24px; padding-bottom: 48px; }
+.narrow { max-width: 420px; }
+
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); }
+.nav-inner { display: flex; align-items: center; gap: 20px; height: 56px; }
+.nav nav { display: flex; gap: 16px; flex: 1; }
+.nav a { color: var(--muted); text-decoration: none; }
+.nav a.active, .nav a:hover { color: var(--text); }
+.nav .brand { color: var(--text); font-weight: 600; }
+.nav-end { display: flex; gap: 16px; align-items: center; }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+button, .button {
+  display: inline-block; font: inherit; font-weight: 500; cursor: pointer; text-decoration: none;
+  padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-text);
+}
+button:disabled { opacity: 0.6; cursor: default; }
+button.secondary, .button.secondary { background: transparent; color: var(--text); border-color: var(--border); }
+button.danger { background: transparent; color: var(--danger); border-color: var(--border); }
+button.small { padding: 4px 10px; font-size: 0.9em; }
+button.link { background: none; border: none; padding: 0; color: var(--muted); }
+button.link:hover { color: var(--text); }
+
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+th { font-size: 0.85em; color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: none; }
+td.row-actions { text-align: right; width: 1%; white-space: nowrap; }
+.empty { color: var(--muted); }
+
+.details { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 0; }
+.details dt { font-size: 0.85em; color: var(--muted); }
+.details dd { margin: 2px 0 0; }
+
+.form { display: grid; gap: 16px; max-width: 560px; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 500; }
+.field.checkbox { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 8px; }
+input, textarea, select {
+  font: inherit; color: inherit; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface); width: 100%;
+}
+input[type="checkbox"] { width: auto; }
+input:focus, textarea:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.error { border: 1px solid var(--danger); color: var(--danger); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 16px; }
+.error ul { margin: 6px 0 0; padding-left: 20px; }
+.not-implemented { border: 1px dashed var(--border); border-radius: var(--radius); padding: 16px; color: var(--muted); }
+.pager { display: flex; align-items: center; gap: 12px; margin-top: 12px; color: var(--muted); }

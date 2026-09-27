@@ -3,13 +3,10 @@ import { pathParams } from "../../validate/context";
 import { Imports } from "../imports";
 import { requestZod } from "../model";
 import { camel, HEADER, MARKER, pascal, wrap } from "../names";
+import { backendStub, regionBegin, regionEnd } from "../regions";
 import { routeOptions } from "./routes";
 
 type CustomEndpoint = Extract<Endpoint, { kind: "custom" }>;
-
-// Slot regions: the only parts of a generated file the writer preserves.
-export const regionBegin = (id: string) => `// @appspec:slot ${id} begin`;
-export const regionEnd = (id: string) => `// @appspec:slot ${id} end`;
 
 // Each backend slot has exactly one caller (rule 10). Page slots are frontend.
 export type BackendSlot = { slot: Slot } & ({ endpoint: CustomEndpoint } | { job: Job });
@@ -90,8 +87,7 @@ export function slotModule(item: BackendSlot): string {
     ...wrap(slot.intent, "// "),
     `export async function ${slot.id}${signature} {`,
     `  ${regionBegin(slot.id)}`,
-    `  throw new NotImplemented(${JSON.stringify(slot.id)});`,
-    `  ${regionEnd(slot.id)}`,
+    backendStub(slot.id) + `  ${regionEnd(slot.id)}`,
     "}",
     "",
   ].join("\n");

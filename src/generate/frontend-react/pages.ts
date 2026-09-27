@@ -4,7 +4,7 @@ import { pathParams } from "../../validate/context";
 import { Imports } from "../imports";
 import { columnsOf, entityNamed, loginField } from "../model";
 import { HEADER, MARKER, pascal, wrap } from "../names";
-import { regionBegin, regionEnd } from "../backend-node/slots";
+import { pageStub, regionBegin, regionEnd } from "../regions";
 import { humanize, paramValues, routeExpr, type Site, type SitePage } from "./site";
 
 type Crud = Extract<Endpoint, { kind: "crud" }>;
@@ -358,14 +358,11 @@ export function pageSlotModule(spec: Spec, sp: SitePage): string {
     "",
     `// Page ${sp.page.id} at ${sp.page.route}.${uses ? " May call:" : ""}`,
     ...(uses ? wrap(uses, "//   ") : []),
-    "//",
-    ...wrap(slot.intent, "// "),
+    `const INTENT = ${JSON.stringify(slot.intent)};`,
+    "",
     `export function ${pascal(slot.id)}({ params }: { params: ${paramsType} }) {`,
     `  ${regionBegin(slot.id)}`,
-    "  void api;",
-    "  void params;",
-    `  return <NotImplemented slot=${JSON.stringify(slot.id)} intent={${JSON.stringify(slot.intent)}} />;`,
-    `  ${regionEnd(slot.id)}`,
+    pageStub(slot.id) + `  ${regionEnd(slot.id)}`,
     "}",
     "",
   ].join("\n");
