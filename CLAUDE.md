@@ -1,0 +1,177 @@
+# Project: AppSpec — a spec-to-app compiler
+
+## Context
+I'm building a compiler that turns a typed application spec (an IR) into a small,
+runnable full-stack app. Long term there will be a visual canvas that emits the IR
+and AI agents that fill custom-logic "slots". NOT in this phase. This phase is the
+deterministic core only: IR → validation → code generation. No LLM calls anywhere
+in this codebase.
+
+Pipeline for this phase:
+  spec (TS file) → Zod-parsed IR → validator (diagnostics) → generators → output repo
+
+## Tech decisions (fixed)
+- Compiler (this repo): TypeScript, Node, Zod for the IR schema. Single package,
+  no monorepo/workspaces. Run with tsx. Tests with vitest.
+- Generated app target: Node + Fastify + TypeScript, PostgreSQL + Drizzle ORM,
+  Zod request/response schemas, React + Vite frontend, docker-compose for a small VPS.
+- Go will be a second backend target LATER. Keep the IR language-agnostic
+  (no Fastify/Drizzle concepts in the IR), but do not build the Go emitter now.
+- Generation uses plain template functions (TS functions returning strings).
+  No AST builders, no template engine dependency.
+- Output must be deterministic: same spec → byte-identical output
+  (stable ordering, no timestamps, no random ids).
+
+## Repo structure
+```
+src/
+  ir/          schema.ts (Zod), types.ts (inferred types, defineSpec)
+  validate/    rules/*.ts, index.ts → Diagnostic[]
+  generate/
+    backend-node/   entities, migrations, routes, jobs, server bootstrap
+    contract/       openapi.ts, client.ts (typed API client)
+    frontend-react/ routes, pages, forms
+    infra/          Dockerfile, docker-compose, .env.example
+  cli.ts       `appspec validate <spec>` / `appspec generate <spec> --out <dir>`
+specs/
+  invoice-reminder.ts
+  notes.ts
+  broken/      intentionally invalid specs, one per validator rule
+test/
+  golden/      snapshot tests of generated output
+```
+
+Commands: `npm run appspec -- validate specs/notes.ts`, `npm test`, `npm run typecheck`.
+
+## IR v0 requirements
+Must express:
+- app: name, backend target ("node" for now), database ("postgres")
+- entities: name, fields, relations, timestamps, softDelete
+- field types: string, text, int, bool, money (integer minor units), datetime,
+  date, uuid, email, enum (with values); flags: required, unique, default
+- relations: belongsTo / hasMany, target entity, onDelete
+- ownership: an entity can be owned by the auth user entity (rows scoped per user)
+- auth: strategy "email_password_jwt", userEntity, optional roles
+- integrations: e.g. { kind: "email", provider: "resend" }
+- endpoints: id, method, path, auth ("public" | "user" | role), scope ("owner" | "all"),
+  kind "crud" (entity + op: list|get|create|update|delete, pagination for list)
+  or kind "custom" (must declare a slot)
+- jobs: id, trigger (cron schedule | entity event), must declare a slot,
+  retries, optional idempotency key field
+- pages: id, route, auth, layout (list | detail | form | custom), uses: endpoint ids
+- slots: id + intent (plain-English description of the custom logic) + declared
+  inputs/outputs. Slots are where AI agents will plug in later. For now the
+  generator emits a typed stub that throws NotImplemented with the intent in a comment.
+
+Anything the reference specs need that the IR can't express cleanly should become
+a slot, not a new IR feature. Flag those cases to me.
+
+## Validator rules (each returns { level: error|warning, code, path, message })
+1. Duplicate entity / endpoint / page / job / slot ids
+2. Relation target entity doesn't exist
+3. Enum field with no values
+4. Auth userEntity missing, or lacks a unique email field
+5. Non-public endpoint/page but no auth block defined
+6. Public write endpoint (POST/PUT/PATCH/DELETE) → error
+7. crud endpoint: entity missing, or op doesn't match HTTP method
+8. Duplicate method + path
+9. get/update/delete crud path missing :id param
+10. custom endpoint or job without a slot
+11. Page uses an endpoint id that doesn't exist
+12. Public page uses an authed endpoint → warning
+13. Invalid cron expression (basic 5-field check)
+14. Job idempotency key refers to a field that isn't unique
+15. scope "owner" on an entity not owned by the user entity
+Each rule gets a matching spec in specs/broken/ and a test proving it fires.
+
+## Reference spec 1: Invoice Reminder (primary test case)
+Entities: User, Client, Invoice, LineItem, Reminder.
+- Money is integer minor units + currency.
+- Invoice status enum: DRAFT, SENT, PAID, CANCELLED.
+- Reminder: invoice relation, scheduledAt, status (PENDING, SENT, FAILED, SKIPPED),
+  attempts, lastError, sentAt, unique idempotencyKey.
+- CRUD for clients and invoices (owner-scoped), line items under invoices.
+- Custom endpoints (slots): send invoice (email + PDF, schedule reminders),
+  get invoice PDF, mark paid.
+- Job (slot): reminder worker on cron. Postgres is the source of truth; claim due
+  reminders with row locking (FOR UPDATE SKIP LOCKED), re-check PAID/CANCELLED
+  immediately before sending, idempotent delivery, retries.
+- Email via Resend. No Redis, Kafka, queues, or microservices.
+- Pages: login, register, clients list/form, invoices list/detail/editor.
+
+## Reference spec 2: Notes (simplicity check)
+User with auth, Note entity (title, body, pinned), owner-scoped CRUD, list + editor pages.
+The IR must describe this with zero slots.
+
+## File ownership (important for later regeneration)
+- Fully generated files start with: `// @appspec:generated — do not edit`
+- Slot regions are wrapped in `// @appspec:slot <id> begin` / `// @appspec:slot <id> end`
+- Anything outside those is user-owned. The generator must never overwrite
+  user-owned files; on regenerate it rewrites generated files and preserves
+  slot bodies.
+
+## Milestones (stop after each one, show me the file tree and key files, wait for my OK)
+1. IR schema + both reference specs parse → verify: `appspec validate` passes both
+2. Validator + broken specs → verify: every rule has a failing-spec test
+3. Backend generator: Drizzle schema, migrations, Fastify CRUD routes with Zod,
+   auth, owner scoping, slot stubs, job runner scaffold
+   → verify: generated Notes app boots via docker-compose and CRUD works via curl;
+     generated Invoice Reminder boots with slots returning NotImplemented
+4. Contract: OpenAPI from IR + typed client → verify: OpenAPI validates,
+   client typechecks against generated backend
+5. React frontend from pages + client → verify: Notes app fully usable in browser
+6. Golden snapshot tests + regeneration test proving slot bodies survive regenerate
+
+## Working rules
+- Ask before assuming anything not specified here. State tradeoffs briefly.
+- Simplest thing that works; no abstractions for single-use code; no speculative config.
+- Don't add dependencies without saying why.
+- Keep the IR small. Pushing back on IR additions is part of the job.
+
+## Decisions log
+These refine or override the requirements above.
+
+### 2026-09-27 — before IR v0
+1. **Auth endpoints are implicit.** An `auth` block implies `auth.register` (POST /auth/register),
+   `auth.login` (POST /auth/login), `auth.me` (GET /auth/me). They are exempt from rule 6, and the
+   `auth.` id prefix is reserved. The user entity gets an implicit `passwordHash`, never in the spec
+   and never in responses.
+2. **Direct ownership.** Every `owned` entity gets its own implicit `ownerId` column (FK → user
+   entity, cascade), including children like LineItem. On create/update the generator verifies that
+   any belongsTo target which is owned belongs to the same user (no cross-tenant links).
+3. **Path params.** In crud paths, `:id` is the entity's own id; any other param must name a
+   belongsTo relation (`:invoiceId` ↔ `invoice`). In custom paths, params must be declared slot
+   inputs; other inputs come from the body (POST/PUT/PATCH) or query (GET/DELETE).
+4. **Job idempotency key** is written `"Entity.field"`.
+5. **Cron triggers only** in v0; entity-event triggers dropped (neither spec needs them, and
+   without a queue they need an outbox design).
+6. **Money** is an integer column of minor units; currency is a separate field. No computed
+   fields; derived values (invoice total) are slot territory.
+7. **Zod checks structure only** (strict objects, identifier formats). All numbered rules run in
+   the validator. Zod issues are reported as Diagnostics with code `schema.<zod issue code>`.
+8. **Slot I/O:** inputs are params (field types incl. enum); output is `void | entity | binary`.
+   `custom` pages require a (frontend) slot.
+9. **Migrations:** the compiler emits SQL itself; drizzle-kit output is nondeterministic (random
+   snapshot ids and file names). Drizzle is used for queries only.
+10. **update op = PATCH only. List pagination = offset/limit.**
+11. **Access** = `"public" | "user" | { role }`.
+12. **Specs are plain data** via `defineSpec()`: JSON-serializable, so the canvas can emit the same.
+13. Generated-app deps (milestone 3): `node:crypto` scrypt for passwords (no native build),
+    `croner` for cron, `@fastify/jwt` or `jose` for JWT.
+
+### 2026-09-27 — IR v0 conventions
+- Arrays (not records) for entities/fields/endpoints/etc., so duplicates are detectable (rule 1)
+  and order is explicit.
+- Implicit per-entity columns: `id` (uuid PK), `ownerId` if owned, `createdAt`/`updatedAt` if
+  timestamps (default true), `deletedAt` if softDelete.
+- belongsTo creates `<name>Id`. hasMany is the named inverse, kept so generated code gets
+  readable names without the compiler guessing plurals.
+- Form pages are create-mode (use a create endpoint) or edit-mode (use get + update), never both.
+- A belongsTo field on a form is rendered as a picker fed by the target's list endpoint in `uses`.
+
+### 2026-09-27 — after IR v0 review
+- **`readOnly` field flag** (added to IR): excluded from create/update request bodies, still in
+  responses. Only slots write these fields (Invoice.status/sentAt/paidAt).
+- **`entity` on custom endpoints** (added to IR): the generated handler loads the row named by
+  `:<entity>Id` (e.g. `:invoiceId`), 404s if missing or not owned by the current user, and passes
+  it to the slot. Authorization never depends on slot (agent) code.
