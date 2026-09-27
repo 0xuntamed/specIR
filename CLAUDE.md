@@ -101,6 +101,7 @@ Extra rules enforcing the decisions log:
 - `crud-path-param` — :id on list/create, or a crud param that isn't a belongsTo FK
 - `custom-path-param` — custom path param not a slot input, or missing the `:<entity>Id` param
 - `unknown-entity` — custom endpoint `entity` or slot output entity doesn't exist
+- `page-layout` — a page's endpoints don't fit its layout (see `src/ir/pages.ts`)
 
 Schema (Zod) errors stop validation and are reported as `schema.<zod issue code>`.
 
@@ -231,7 +232,7 @@ api/src/lib/{errors,load,context}.ts    api/src/slots/<slotId>.ts      api/src/i
   `{ items }`, paginated lists `{ items, total, limit, offset }`, newest first.
 - **Jobs** run in the API process via croner (`protect` prevents overlap). `retries` = whole-run
   retries with exponential backoff; a NotImplemented stub logs a warning and isn't retried.
-- **Docker:** node:22-alpine two-stage build, postgres:17-alpine; only the API port is published.
+- **Docker:** node:22-alpine two-stage build, postgres:17-alpine. (Since milestone 5 only `web` is published.)
 
 ### 2026-09-27 — milestone 4 (contract)
 - **Layout:** backend moved to `api/`, contract in `contract/`, frontend will be `web/`. A Go
@@ -253,3 +254,29 @@ api/src/lib/{errors,load,context}.ts    api/src/slots/<slotId>.ts      api/src/i
 - OpenAPI's generated marker is an `"x-appspec"` key on line 2 (JSON has no comments).
 - Compiler tests validate the OpenAPI with `@readme/openapi-parser` (dev dependency) and
   typecheck the client standalone with DOM libs only.
+
+### 2026-09-27 — milestone 5 (React frontend)
+- **Serving:** `web/` builds with Vite and runs in an nginx container that serves the SPA and
+  proxies `/api/*` → `api:3000` (prefix stripped). Only `web` is published (`WEB_PORT`, default
+  8080); the API and Postgres are internal. The web image builds from the repo root because it
+  needs `contract/`.
+- **Deps:** react, react-dom, react-router (v8); dev: vite, @vitejs/plugin-react, typescript,
+  @types/react*. No data-fetching, form or CSS libraries.
+- **Page plans** (`src/ir/pages.ts`, enforced by `page-layout`):
+  - list: one list endpoint (+ delete of the same entity); route supplies nested params.
+  - form: one create (+ list endpoints of belongsTo targets as pickers), or get + update of one
+    entity (+ pickers), or exactly `auth.login` / `auth.register`.
+  - detail: one get (+ delete, child lists nested under it, and custom endpoints guarding the
+    same entity with no other required input, rendered as action buttons).
+  - custom: renders its slot.
+- **Navigation is derived:** list rows link to the entity's detail page, else its edit page;
+  after create → detail, else list; nav bar = parameterless list pages; home = first authed one.
+  A detail page links to its edit form and to deeper routes (`/invoices/:id/edit`).
+- **Generated web layout:** `src/pages/<Page>.tsx` (short: FieldDef lists + kit wiring),
+  `src/components/kit.tsx` (Form, Table, Details, Pager, ErrorBanner), `src/lib/{fields,hooks}.ts`,
+  `src/session.tsx` (token in localStorage, RequireAuth, `?next=` limited to same-app paths),
+  `src/api.ts` (client with baseUrl `/api`; a 401 with a token signs out).
+- **Frontend slots:** custom pages get `web/src/slots/<id>.tsx` with the same two preserved
+  regions as backend slots; the stub renders `<NotImplemented>` with the intent.
+- **Money** is shown and edited with 2 decimals (minor units ÷ 100); currencies with other
+  exponents would need a slot or a future IR change.

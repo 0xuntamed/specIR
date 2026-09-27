@@ -25,7 +25,8 @@ CMD ["node", "dist/server.js"]
 `;
 }
 
-// Postgres stays on the compose network; only the API port is published.
+// Only web is published. It serves the frontend and proxies /api to the api
+// service, so the API and Postgres stay on the compose network.
 export function dockerCompose(spec: Spec): string {
   return `${HASH_HEADER}
 name: ${spec.app.name}
@@ -51,11 +52,20 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@db:5432/\${POSTGRES_DB}
-    ports:
-      - "\${PORT:-3000}:\${PORT:-3000}"
+      PORT: "3000"
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    ports:
+      - "\${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
     restart: unless-stopped
 
 volumes:
@@ -70,7 +80,8 @@ export function envExample(spec: Spec): string {
     "POSTGRES_USER=app",
     "POSTGRES_PASSWORD=change-me",
     `POSTGRES_DB=${spec.app.name.replaceAll("-", "_")}`,
-    "PORT=3000",
+    "# The app is served at http://localhost:$WEB_PORT, with the API under /api.",
+    "WEB_PORT=8080",
   ];
   if (spec.auth) lines.push("# At least 32 random characters, e.g. `openssl rand -hex 32`.", "JWT_SECRET=");
   if (spec.integrations.some((i) => i.kind === "email")) lines.push("RESEND_API_KEY=", "EMAIL_FROM=");

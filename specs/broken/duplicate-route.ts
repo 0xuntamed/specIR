@@ -10,8 +10,12 @@ export default defineSpec({
     { id: "things.peek", kind: "custom", method: "GET", path: "/things/:thingId", auth: "public", slot: "peek" },
   ],
   pages: [
-    { id: "first", route: "/things", auth: "public", layout: "list" },
-    { id: "second", route: "/things", auth: "public", layout: "list" },
+    { id: "first", route: "/things", auth: "public", layout: "custom", slot: "firstView" },
+    { id: "second", route: "/things", auth: "public", layout: "custom", slot: "secondView" },
   ],
-  slots: [{ id: "peek", intent: "Return a thing without counting a view.", inputs: [{ name: "thingId", type: "uuid", required: true }] }],
+  slots: [
+    { id: "peek", intent: "Return a thing without counting a view.", inputs: [{ name: "thingId", type: "uuid", required: true }] },
+    { id: "firstView", intent: "Show things one way." },
+    { id: "secondView", intent: "Show things another way." },
+  ],
 });

@@ -14,6 +14,7 @@ import { hasManyInverse } from "./rules/hasmany-inverse";
 import { idempotencyKey } from "./rules/idempotency-key";
 import { invalidCron } from "./rules/invalid-cron";
 import { ownerScope } from "./rules/owner-scope";
+import { pageLayout } from "./rules/page-layout";
 import { publicPageUsesAuthed } from "./rules/public-page-uses-authed";
 import { publicWrite } from "./rules/public-write";
 import { readOnlyUnsettable } from "./rules/readonly-unsettable";
@@ -54,6 +55,7 @@ export const rules: Rule[] = [
   unknownEntity,
   slotRef, // 10
   unknownEndpoint, // 11
+  pageLayout,
   publicPageUsesAuthed, // 12
   invalidCron, // 13
   idempotencyKey, // 14

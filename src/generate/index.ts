@@ -9,6 +9,10 @@ import { backendSlots, customRoutesModule, jobsModule, slotModule } from "./back
 import { clientModule } from "./contract/client";
 import { contractOf } from "./contract/model";
 import { openapiJson } from "./contract/openapi";
+import { apiModule, indexHtml, layoutModule, mainModule, nginxConf, sessionModule, viteConfig, webDockerfile, webPackageJson, webTsconfig } from "./frontend-react/app";
+import { fieldsModule, hooksModule, kitModule, stylesCss } from "./frontend-react/kit";
+import { pageComponentModule, pageSlotModule } from "./frontend-react/pages";
+import { siteOf } from "./frontend-react/site";
 import { dockerCompose, dockerfile, envExample, ignoreFile } from "./infra/index";
 import { camel } from "./names";
 
@@ -18,6 +22,7 @@ import { camel } from "./names";
 //   docker-compose.yml, .env.example   run everything
 //   contract/                          OpenAPI + typed client, language-agnostic
 //   api/                               the Node backend (a Go emitter would replace only this)
+//   web/                               React + Vite frontend, served by nginx
 export function generate(spec: Spec): Map<string, string> {
   const files = new Map<string, string>();
   const add = (path: string, content: string) => files.set(path, content);
@@ -25,6 +30,8 @@ export function generate(spec: Spec): Map<string, string> {
   add("docker-compose.yml", dockerCompose(spec));
   add(".env.example", envExample(spec));
   add(".gitignore", ignoreFile(["node_modules", "dist", ".env"]));
+  // For the web image, which builds from the root (it needs contract/).
+  add(".dockerignore", ignoreFile(["**/node_modules", "**/dist", ".env", "api"]));
 
   const contract = contractOf(spec);
   add("contract/openapi.json", openapiJson(contract));
@@ -64,6 +71,28 @@ export function generate(spec: Spec): Map<string, string> {
   if (spec.integrations.some((i) => i.kind === "email")) add("api/src/integrations/email.ts", emailModule());
 
   add("api/src/server.ts", serverModule(spec, routeEntities));
+
+  if (spec.pages.length > 0) {
+    const site = siteOf(spec);
+    add("web/package.json", webPackageJson(spec));
+    add("web/tsconfig.json", webTsconfig());
+    add("web/vite.config.ts", viteConfig());
+    add("web/index.html", indexHtml(spec));
+    add("web/Dockerfile", webDockerfile());
+    add("web/nginx.conf", nginxConf());
+    add("web/src/main.tsx", mainModule(site));
+    add("web/src/api.ts", apiModule());
+    add("web/src/session.tsx", sessionModule(spec, site));
+    add("web/src/styles.css", stylesCss());
+    add("web/src/lib/fields.ts", fieldsModule());
+    add("web/src/lib/hooks.ts", hooksModule());
+    add("web/src/components/kit.tsx", kitModule());
+    add("web/src/components/Layout.tsx", layoutModule(spec, site));
+    for (const sp of site.pages) {
+      add(`web/src/pages/${sp.file}.tsx`, pageComponentModule(spec, site, sp));
+      if (sp.plan.kind === "custom") add(`web/src/slots/${sp.page.slot}.tsx`, pageSlotModule(spec, sp));
+    }
+  }
 
   return new Map([...files].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }

@@ -221,6 +221,35 @@ exports[`specs/broken/owner-scope.ts > fires its own rule and nothing else 1`] =
 ]
 `;
 
+exports[`specs/broken/page-layout.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "page-layout",
+    "level": "error",
+    "message": "page everything: a list page uses exactly one list endpoint",
+    "path": "pages[0]",
+  },
+  {
+    "code": "page-layout",
+    "level": "error",
+    "message": "page thingForm: a form page uses one create endpoint, or get + update of one entity, or auth.login / auth.register",
+    "path": "pages[1]",
+  },
+  {
+    "code": "page-layout",
+    "level": "error",
+    "message": "page thing: a detail page uses exactly one get endpoint",
+    "path": "pages[2]",
+  },
+  {
+    "code": "page-layout",
+    "level": "error",
+    "message": "page groupThings: route /group-things needs :groupId for things.byGroup",
+    "path": "pages[3]",
+  },
+]
+`;
+
 exports[`specs/broken/public-page-uses-authed.ts > fires its own rule and nothing else 1`] = `
 [
   {

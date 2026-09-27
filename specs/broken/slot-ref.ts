@@ -4,8 +4,11 @@ import { defineSpec } from "../../src/ir/types";
 // slot that doesn't exist, two jobs sharing one slot, and a list page that has a slot.
 export default defineSpec({
   app: { name: "broken", backend: "node", database: "postgres" },
-  entities: [],
-  endpoints: [{ id: "reports.run", kind: "custom", method: "GET", path: "/reports", auth: "public" }],
+  entities: [{ name: "Report", fields: [] }],
+  endpoints: [
+    { id: "reports.run", kind: "custom", method: "GET", path: "/reports", auth: "public" },
+    { id: "reports.list", kind: "crud", entity: "Report", op: "list", method: "GET", path: "/report-rows", auth: "public", scope: "all" },
+  ],
   jobs: [
     { id: "nightly", trigger: { kind: "cron", schedule: "0 3 * * *" }, slot: "nightlyCleanup" },
     { id: "hourly", trigger: { kind: "cron", schedule: "0 * * * *" }, slot: "cleanup" },
@@ -14,6 +17,6 @@ export default defineSpec({
   slots: [{ id: "cleanup", intent: "Delete expired rows." }],
   pages: [
     { id: "dashboard", route: "/", auth: "public", layout: "custom" },
-    { id: "reports", route: "/reports", auth: "public", layout: "list", slot: "reportsTable", uses: ["reports.run"] },
+    { id: "reports", route: "/reports", auth: "public", layout: "list", slot: "reportsTable", uses: ["reports.list"] },
   ],
 });
