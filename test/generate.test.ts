@@ -31,11 +31,11 @@ it("emits slot, job and custom-route files only when the spec has them", () => {
   expect(notesFiles.filter((p) => /slots\/|jobs\.ts|custom\.ts|context\.ts/.test(p))).toEqual([]);
 
   const invoiceFiles = [...generate(parse(invoiceReminder)).keys()];
-  expect(invoiceFiles.filter((p) => p.startsWith("src/slots/"))).toEqual([
-    "src/slots/markInvoicePaid.ts",
-    "src/slots/processDueReminders.ts",
-    "src/slots/renderInvoicePdf.ts",
-    "src/slots/sendInvoice.ts",
+  expect(invoiceFiles.filter((p) => p.startsWith("api/src/slots/"))).toEqual([
+    "api/src/slots/markInvoicePaid.ts",
+    "api/src/slots/processDueReminders.ts",
+    "api/src/slots/renderInvoicePdf.ts",
+    "api/src/slots/sendInvoice.ts",
   ]);
 });
 
@@ -45,7 +45,7 @@ describe("writeFiles", () => {
   it("preserves slot bodies when regenerating", () => {
     const dir = mkdtempSync(join(tmpdir(), "appspec-"));
     writeFiles(dir, files());
-    const slot = join(dir, "src/slots/sendInvoice.ts");
+    const slot = join(dir, "api/src/slots/sendInvoice.ts");
     const implemented = readFileSync(slot, "utf8")
       .replace('  throw new NotImplemented("sendInvoice");\n', "  return input.invoice; // implemented\n")
       .replace("// @appspec:slot sendInvoice:imports end", 'import { sql } from "drizzle-orm";\n// @appspec:slot sendInvoice:imports end');
@@ -59,8 +59,8 @@ describe("writeFiles", () => {
   it("refuses to overwrite a file without the generated marker", () => {
     const dir = mkdtempSync(join(tmpdir(), "appspec-"));
     writeFiles(dir, files());
-    writeFileSync(join(dir, "src/server.ts"), "// my own server\n");
-    expect(() => writeFiles(dir, files())).toThrow(/src\/server\.ts/);
-    expect(readFileSync(join(dir, "src/server.ts"), "utf8")).toBe("// my own server\n");
+    writeFileSync(join(dir, "api/src/server.ts"), "// my own server\n");
+    expect(() => writeFiles(dir, files())).toThrow(/api\/src\/server\.ts/);
+    expect(readFileSync(join(dir, "api/src/server.ts"), "utf8")).toBe("// my own server\n");
   });
 });

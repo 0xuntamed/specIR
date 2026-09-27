@@ -25,12 +25,12 @@ function bodyZod(c: Column): string {
   return c.default !== undefined ? `${base}.optional()` : base;
 }
 
-// Entities with a create/update endpoint, plus the user entity (register).
-export function hasWriteSchemas(spec: Spec, entity: Entity): boolean {
-  return (
-    entity.name === spec.auth?.userEntity ||
-    spec.endpoints.some((ep) => ep.kind === "crud" && ep.entity === entity.name && (ep.op === "create" || ep.op === "update"))
-  );
+// Which request schemas an entity needs. Update derives from Create, and the
+// user entity always needs Create for register.
+export function writeSchemas(spec: Spec, entity: Entity): { create: boolean; update: boolean } {
+  const has = (op: string) => spec.endpoints.some((ep) => ep.kind === "crud" && ep.entity === entity.name && ep.op === op);
+  const update = has("update");
+  return { create: update || has("create") || entity.name === spec.auth?.userEntity, update };
 }
 
 // src/schemas/<entity>.ts
@@ -47,15 +47,16 @@ export function entitySchemas(spec: Spec, entity: Entity): string {
     "});",
     `export type ${name} = z.infer<typeof ${name}>;`,
   ];
-  if (hasWriteSchemas(spec, entity)) {
+  const writes = writeSchemas(spec, entity);
+  if (writes.create) {
     out.push(
       "",
       "// Request bodies. Unknown keys, readOnly fields and generated columns are rejected.",
       `export const ${name}Create = z.strictObject({`,
       ...cols.filter((c) => c.writable).map((c) => `  ${c.prop}: ${bodyZod(c)},`),
       "});",
-      `export const ${name}Update = ${name}Create.partial();`,
     );
   }
+  if (writes.update) out.push(`export const ${name}Update = ${name}Create.partial();`);
   return `${out.join("\n")}\n`;
 }

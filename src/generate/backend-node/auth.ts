@@ -71,8 +71,8 @@ export function requireRole(role: string) {
 `
     : ""
 }
-const RegisterBody = ${schema}Create.extend({ password: z.string().min(8) });
-const LoginBody = z.strictObject({ ${email}: z.email(), password: z.string() });
+export const RegisterBody = ${schema}Create.extend({ password: z.string().min(8) });
+export const LoginBody = z.strictObject({ ${email}: z.email(), password: z.string() });
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   // auth.register

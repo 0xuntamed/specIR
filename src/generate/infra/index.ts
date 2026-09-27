@@ -9,9 +9,9 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json ./
 RUN npm install
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
-RUN npx tsc
+RUN npx tsc -p tsconfig.build.json
 
 FROM node:22-alpine
 WORKDIR /app
@@ -46,8 +46,8 @@ services:
       retries: 30
     restart: unless-stopped
 
-  app:
-    build: .
+  api:
+    build: ./api
     env_file: .env
     environment:
       DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@db:5432/\${POSTGRES_DB}

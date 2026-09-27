@@ -28,13 +28,14 @@ export function packageJson(spec: Spec): string {
     version: "0.0.0",
     private: true,
     type: "module",
-    scripts: { build: "tsc", start: "node dist/server.js", typecheck: "tsc --noEmit" },
+    scripts: { build: "tsc -p tsconfig.build.json", start: "node dist/server.js", typecheck: "tsc" },
     dependencies: pick(deps),
     devDependencies: pick(["@types/node", "@types/pg", "tsx", "typescript"]),
   };
   return `${JSON.stringify(pkg, null, 2)}\n`;
 }
 
+// Typecheck config: the server plus contract.check.ts, which pulls in ../contract.
 export function tsconfig(): string {
   return `${HEADER}
 {
@@ -44,9 +45,23 @@ export function tsconfig(): string {
     "moduleResolution": "NodeNext",
     "strict": true,
     "skipLibCheck": true,
-    "rootDir": "src",
-    "outDir": "dist",
+    "noEmit": true,
     "types": ["node"]
+  },
+  "include": ["src", "contract.check.ts"]
+}
+`;
+}
+
+// Build config: the server only, src/ → dist/.
+export function tsconfigBuild(): string {
+  return `${HEADER}
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": ["src"]
 }

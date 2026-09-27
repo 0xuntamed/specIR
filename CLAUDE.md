@@ -201,13 +201,15 @@ These refine or override the requirements above.
   to milestone 5, where the React generator defines what it actually needs.
 
 ### 2026-09-27 — milestone 3 (backend generator)
-`appspec generate <spec> --out <dir>` → `src/generate/`. Generated app:
+`appspec generate <spec> --out <dir>` → `src/generate/`. Generated app (layout as of milestone 4):
 ```
-package.json tsconfig.json Dockerfile docker-compose.yml .env.example .dockerignore .gitignore
-migrations/0000_init.sql
-src/server.ts env.ts auth.ts jobs.ts
-src/db/{schema,client,migrate}.ts   src/schemas/<entity>.ts   src/routes/<entity>.ts, custom.ts
-src/lib/{errors,load,context}.ts    src/slots/<slotId>.ts      src/integrations/email.ts
+docker-compose.yml .env.example .gitignore
+contract/openapi.json client.ts                       ← language-agnostic, milestone 4
+api/package.json tsconfig.json tsconfig.build.json Dockerfile .dockerignore contract.check.ts
+api/migrations/0000_init.sql
+api/src/server.ts env.ts auth.ts jobs.ts
+api/src/db/{schema,client,migrate}.ts   api/src/schemas/<entity>.ts   api/src/routes/<entity>.ts, custom.ts
+api/src/lib/{errors,load,context}.ts    api/src/slots/<slotId>.ts      api/src/integrations/email.ts
 ```
 - **Generated-app deps:** fastify, zod, drizzle-orm, pg, @fastify/jwt (auth), croner (jobs).
   No resend SDK (fetch), no type provider (explicit `.parse()`), no bcrypt (node:crypto scrypt),
@@ -230,3 +232,24 @@ src/lib/{errors,load,context}.ts    src/slots/<slotId>.ts      src/integrations/
 - **Jobs** run in the API process via croner (`protect` prevents overlap). `retries` = whole-run
   retries with exponential backoff; a NotImplemented stub logs a warning and isn't retried.
 - **Docker:** node:22-alpine two-stage build, postgres:17-alpine; only the API port is published.
+
+### 2026-09-27 — milestone 4 (contract)
+- **Layout:** backend moved to `api/`, contract in `contract/`, frontend will be `web/`. A Go
+  emitter would replace only `api/`; the contract and web stay.
+- **One contract model** (`src/generate/contract/model.ts`: schemas + operations) is derived from
+  the IR and rendered twice: `contract/openapi.json` (OpenAPI 3.1) and `contract/client.ts`.
+  The client is generated from the IR, not from the backend, so it would serve a Go backend too.
+- **Client:** zero-dependency, fetch-based, `createApiClient({ baseUrl, token })`. Endpoint ids
+  become nested methods (`invoices.markPaid` → `api.invoices.markPaid(invoiceId)`); path params
+  positional, then a body or query object. Wire types: dates/datetimes are strings, money is
+  integer minor units. Non-2xx throws `ApiError { status, body }`.
+- **Contract check:** `api/contract.check.ts` asserts, per entity, that the client's types equal
+  the backend's Zod types (response via JSON wire mapping, Create/Update/Register/Login via
+  z.input), comparing assignability both ways plus key sets. `npm run typecheck` in `api/`
+  compiles it. Custom endpoint inputs aren't covered by the type check (their query/path inputs
+  are coerced strings); the e2e covers them.
+- `api/tsconfig.json` is for typechecking (noEmit, includes the check); `tsconfig.build.json`
+  builds src/ → dist/.
+- OpenAPI's generated marker is an `"x-appspec"` key on line 2 (JSON has no comments).
+- Compiler tests validate the OpenAPI with `@readme/openapi-parser` (dev dependency) and
+  typecheck the client standalone with DOM libs only.
