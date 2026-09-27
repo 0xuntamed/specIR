@@ -6,7 +6,10 @@ export default defineSpec({
   entities: [{ name: "Delivery", fields: [{ name: "key", type: "string", required: true }] }],
   jobs: [
     { id: "deliver", trigger: { kind: "cron", schedule: "*/5 * * * *" }, slot: "deliver", idempotencyKey: "Delivery.key" },
-    { id: "redeliver", trigger: { kind: "cron", schedule: "0 * * * *" }, slot: "deliver", idempotencyKey: "Delivery.token" },
+    { id: "redeliver", trigger: { kind: "cron", schedule: "0 * * * *" }, slot: "redeliver", idempotencyKey: "Delivery.token" },
   ],
-  slots: [{ id: "deliver", intent: "Deliver pending items." }],
+  slots: [
+    { id: "deliver", intent: "Deliver pending items." },
+    { id: "redeliver", intent: "Retry failed deliveries." },
+  ],
 });

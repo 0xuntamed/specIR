@@ -12,6 +12,7 @@ export const reservedName: Rule = {
     const findings: Finding[] = [];
     spec.entities.forEach((e, i) => {
       const reserved = new Set(ALWAYS);
+      if (e.owned) reserved.add("owner"); // the implicit relation behind ownerId
       if (e.name === spec.auth?.userEntity) {
         reserved.add("password").add("passwordHash");
         if (spec.auth.roles.length > 0) reserved.add("role");

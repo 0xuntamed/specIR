@@ -212,6 +212,12 @@ exports[`specs/broken/owner-scope.ts > fires its own rule and nothing else 1`] =
     "message": "endpoint notes.list: scope owner needs a logged-in user, but auth is public",
     "path": "endpoints[1].scope",
   },
+  {
+    "code": "owner-scope",
+    "level": "error",
+    "message": "endpoint notes.preview loads owned Note rows, so it can't be public",
+    "path": "endpoints[2].auth",
+  },
 ]
 `;
 
@@ -301,6 +307,12 @@ exports[`specs/broken/slot-ref.ts > fires its own rule and nothing else 1`] = `
     "level": "error",
     "message": "job nightly names unknown slot "nightlyCleanup"",
     "path": "jobs[0].slot",
+  },
+  {
+    "code": "slot-ref",
+    "level": "error",
+    "message": "job daily reuses slot cleanup, already used by job hourly; a slot has one caller",
+    "path": "jobs[2].slot",
   },
   {
     "code": "slot-ref",

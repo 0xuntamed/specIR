@@ -1,15 +1,20 @@
 import type { Finding, Rule } from "../context";
 
 // Rule 10. Custom endpoints, custom pages and jobs must name an existing slot;
-// other pages must not have one.
+// other pages must not have one. Each slot has one caller, so its generated
+// signature (inputs, loaded entity, context) is unambiguous.
 export const slotRef: Rule = {
   code: "slot-ref",
   level: "error",
   check(spec, ctx) {
     const findings: Finding[] = [];
+    const callers = new Map<string, string>();
     const require = (slot: string | undefined, path: string, what: string) => {
       if (slot === undefined) findings.push({ path, message: `${what} must declare a slot` });
       else if (!ctx.slots.has(slot)) findings.push({ path: `${path}.slot`, message: `${what} names unknown slot "${slot}"` });
+      else if (callers.has(slot)) {
+        findings.push({ path: `${path}.slot`, message: `${what} reuses slot ${slot}, already used by ${callers.get(slot)}; a slot has one caller` });
+      } else callers.set(slot, what);
     };
 
     spec.endpoints.forEach((ep, i) => {

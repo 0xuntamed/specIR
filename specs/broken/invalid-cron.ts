@@ -6,7 +6,10 @@ export default defineSpec({
   entities: [],
   jobs: [
     { id: "often", trigger: { kind: "cron", schedule: "every 5 minutes" }, slot: "tick" },
-    { id: "late", trigger: { kind: "cron", schedule: "0 25 * * *" }, slot: "tick" },
+    { id: "late", trigger: { kind: "cron", schedule: "0 25 * * *" }, slot: "tock" },
   ],
-  slots: [{ id: "tick", intent: "Do periodic work." }],
+  slots: [
+    { id: "tick", intent: "Do frequent work." },
+    { id: "tock", intent: "Do late-night work." },
+  ],
 });

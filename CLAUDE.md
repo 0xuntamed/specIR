@@ -82,15 +82,18 @@ code and nothing else, and snapshots every message.
 8. `duplicate-route` — duplicate method + path (param names ignored; includes auth endpoints
    and page routes)
 9. `crud-missing-id` — get/update/delete crud path missing :id param
-10. `slot-ref` — custom endpoint, custom page or job without an existing slot; slot on a non-custom page
+10. `slot-ref` — custom endpoint, custom page or job without an existing slot; slot on a non-custom
+    page; a slot with more than one caller
 11. `unknown-endpoint` — page uses an endpoint id that doesn't exist
 12. `public-page-uses-authed` — public page uses an authed endpoint (warning)
 13. `invalid-cron` — invalid cron expression (basic 5-field numeric check; no MON/JAN names)
 14. `idempotency-key` — job idempotency key entity/field missing or not unique
-15. `owner-scope` — scope "owner" on an entity that isn't owned, or on a public endpoint
+15. `owner-scope` — scope "owner" on an entity that isn't owned, or on a public endpoint; a public
+    custom endpoint that loads an owned entity
 
 Extra rules enforcing the decisions log:
-- `reserved-name` — field/relation/FK named like a generated column; `auth.*` endpoint ids
+- `reserved-name` — field/relation/FK named like a generated column (or `owner` on an owned
+  entity); `auth.*` endpoint ids
 - `hasmany-inverse` — hasMany target needs exactly one belongsTo pointing back
 - `setnull-required` — onDelete setNull on a required belongsTo
 - `readonly-unsettable` — required readOnly field with no default on an entity created over HTTP
@@ -196,3 +199,34 @@ These refine or override the requirements above.
 ### 2026-09-27 — milestone 2
 - Page layout rules (form = create xor get+update, list needs a list endpoint, …) are deferred
   to milestone 5, where the React generator defines what it actually needs.
+
+### 2026-09-27 — milestone 3 (backend generator)
+`appspec generate <spec> --out <dir>` → `src/generate/`. Generated app:
+```
+package.json tsconfig.json Dockerfile docker-compose.yml .env.example .dockerignore .gitignore
+migrations/0000_init.sql
+src/server.ts env.ts auth.ts jobs.ts
+src/db/{schema,client,migrate}.ts   src/schemas/<entity>.ts   src/routes/<entity>.ts, custom.ts
+src/lib/{errors,load,context}.ts    src/slots/<slotId>.ts      src/integrations/email.ts
+```
+- **Generated-app deps:** fastify, zod, drizzle-orm, pg, @fastify/jwt (auth), croner (jobs).
+  No resend SDK (fetch), no type provider (explicit `.parse()`), no bcrypt (node:crypto scrypt),
+  no drizzle-kit.
+- **Markers per file type:** `//`, `--` (SQL), `#` (Docker/YAML/env), and a `"//"` key in
+  package.json. The writer refuses to overwrite any file without one.
+- **Slot files** have two preserved regions: `<id>:imports` (module scope: imports, helpers) and
+  `<id>` (function body). Everything else in the file is regenerated. Each slot has exactly one
+  caller, so its signature is fixed: endpoint slots get `(ctx: SlotContext, input)` where input
+  includes the guarded row; job slots get `(ctx: JobContext)`. Slots receive and return Drizzle
+  rows (`<Entity>Row`); routes parse responses through the Zod response schema.
+- **Database:** singular snake_case tables, always quoted; enum = text + CHECK; money = bigint
+  (JS number); datetime = timestamptz ↔ Date; date = `YYYY-MM-DD` string. FKs added after all
+  tables, indexed. `0000_init.sql` is regenerated from the full spec, so a schema change means
+  resetting the DB until spec-diff migrations exist. Hand-written `migrations/*.sql` (no marker)
+  are applied too, in name order.
+- **HTTP:** Zod errors → 400 `{ error, issues }`; not found / not owned → 404; FK to a row the
+  user doesn't own → 400; unique/FK violations → 409; NotImplemented slot → 501. Lists return
+  `{ items }`, paginated lists `{ items, total, limit, offset }`, newest first.
+- **Jobs** run in the API process via croner (`protect` prevents overlap). `retries` = whole-run
+  retries with exponential backoff; a NotImplemented stub logs a warning and isn't retried.
+- **Docker:** node:22-alpine two-stage build, postgres:17-alpine; only the API port is published.
