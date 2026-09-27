@@ -25,4 +25,5 @@ if (errors > 0 || !spec) {
 const counts = (["entities", "endpoints", "jobs", "pages", "slots"] as const)
   .map((key) => `${spec[key].length} ${key}`)
   .join(", ");
-console.log(`ok ${file}: ${counts}`);
+const warnings = diagnostics.length > 0 ? ` (${diagnostics.length} warning(s))` : "";
+console.log(`ok ${file}: ${counts}${warnings}`);

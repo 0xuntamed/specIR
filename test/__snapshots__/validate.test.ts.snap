@@ -1,0 +1,374 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`specs/broken/auth-required.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "auth-required",
+    "level": "error",
+    "message": "Note is owned, which needs an auth block",
+    "path": "entities[0].owned",
+  },
+  {
+    "code": "auth-required",
+    "level": "error",
+    "message": "endpoint notes.list requires auth but there is no auth block",
+    "path": "endpoints[0].auth",
+  },
+  {
+    "code": "auth-required",
+    "level": "error",
+    "message": "page notes requires auth but there is no auth block",
+    "path": "pages[0].auth",
+  },
+]
+`;
+
+exports[`specs/broken/auth-user-entity.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "auth-user-entity",
+    "level": "error",
+    "message": "User needs a required, unique email field to log in with",
+    "path": "auth.userEntity",
+  },
+]
+`;
+
+exports[`specs/broken/crud-mismatch.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "crud-mismatch",
+    "level": "error",
+    "message": "endpoint things.remove: op delete must use DELETE, not GET",
+    "path": "endpoints[0].method",
+  },
+  {
+    "code": "crud-mismatch",
+    "level": "error",
+    "message": "endpoint things.view: pagination only applies to op list",
+    "path": "endpoints[1].pagination",
+  },
+  {
+    "code": "crud-mismatch",
+    "level": "error",
+    "message": "endpoint ghosts.list uses unknown entity "Ghost"",
+    "path": "endpoints[2].entity",
+  },
+]
+`;
+
+exports[`specs/broken/crud-missing-id.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "crud-missing-id",
+    "level": "error",
+    "message": "endpoint things.get: op get needs an :id param in /things",
+    "path": "endpoints[0].path",
+  },
+]
+`;
+
+exports[`specs/broken/crud-path-param.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "crud-path-param",
+    "level": "error",
+    "message": "endpoint things.byGroup: :groupId isn't a belongsTo relation of Thing",
+    "path": "endpoints[0].path",
+  },
+  {
+    "code": "crud-path-param",
+    "level": "error",
+    "message": "endpoint things.list: op list can't take :id",
+    "path": "endpoints[1].path",
+  },
+]
+`;
+
+exports[`specs/broken/custom-path-param.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "custom-path-param",
+    "level": "error",
+    "message": "endpoint things.report: :thingId isn't an input of slot report",
+    "path": "endpoints[0].path",
+  },
+  {
+    "code": "custom-path-param",
+    "level": "error",
+    "message": "endpoint things.summary: Thing is loaded from :thingId, which /things/:id/summary lacks",
+    "path": "endpoints[1].path",
+  },
+]
+`;
+
+exports[`specs/broken/duplicate-id.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "duplicate-id",
+    "level": "error",
+    "message": "duplicate entity "Thing" (first at entities[0])",
+    "path": "entities[1]",
+  },
+  {
+    "code": "duplicate-id",
+    "level": "error",
+    "message": "duplicate name "title" in Item (first at entities[2].fields[0])",
+    "path": "entities[2].fields[1]",
+  },
+  {
+    "code": "duplicate-id",
+    "level": "error",
+    "message": "duplicate name "thingId" in Item (foreign key of relation thing; first at entities[2].fields[2])",
+    "path": "entities[2].relations[0]",
+  },
+]
+`;
+
+exports[`specs/broken/duplicate-route.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "duplicate-route",
+    "level": "error",
+    "message": "endpoint things.peek: GET /things/:thingId is already taken by things.get",
+    "path": "endpoints[1].path",
+  },
+  {
+    "code": "duplicate-route",
+    "level": "error",
+    "message": "page second: route /things is already taken by page first",
+    "path": "pages[1].route",
+  },
+]
+`;
+
+exports[`specs/broken/empty-enum.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "empty-enum",
+    "level": "error",
+    "message": "enum Thing.kind has no values",
+    "path": "entities[0].fields[0].values",
+  },
+]
+`;
+
+exports[`specs/broken/hasmany-inverse.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "hasmany-inverse",
+    "level": "error",
+    "message": "hasMany Parent.children needs a belongsTo Parent on Child",
+    "path": "entities[0].relations[0]",
+  },
+]
+`;
+
+exports[`specs/broken/idempotency-key.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "idempotency-key",
+    "level": "error",
+    "message": "job deliver: Delivery.key must be unique to serve as an idempotency key",
+    "path": "jobs[0].idempotencyKey",
+  },
+  {
+    "code": "idempotency-key",
+    "level": "error",
+    "message": "job redeliver: Delivery has no field "token"",
+    "path": "jobs[1].idempotencyKey",
+  },
+]
+`;
+
+exports[`specs/broken/invalid-cron.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "invalid-cron",
+    "level": "error",
+    "message": "job often: "every 5 minutes": expected 5 fields, got 3",
+    "path": "jobs[0].trigger.schedule",
+  },
+  {
+    "code": "invalid-cron",
+    "level": "error",
+    "message": "job late: "0 25 * * *": hour: 25 is outside 0-23",
+    "path": "jobs[1].trigger.schedule",
+  },
+]
+`;
+
+exports[`specs/broken/owner-scope.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "owner-scope",
+    "level": "error",
+    "message": "endpoint things.list: scope owner needs Thing to be owned",
+    "path": "endpoints[0].scope",
+  },
+  {
+    "code": "owner-scope",
+    "level": "error",
+    "message": "endpoint notes.list: scope owner needs a logged-in user, but auth is public",
+    "path": "endpoints[1].scope",
+  },
+]
+`;
+
+exports[`specs/broken/public-page-uses-authed.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "public-page-uses-authed",
+    "level": "warning",
+    "message": "public page home uses things.list, which requires auth",
+    "path": "pages[0].uses[0]",
+  },
+  {
+    "code": "public-page-uses-authed",
+    "level": "warning",
+    "message": "public page home uses auth.me, which requires auth",
+    "path": "pages[0].uses[1]",
+  },
+]
+`;
+
+exports[`specs/broken/public-write.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "public-write",
+    "level": "error",
+    "message": "endpoint things.create is a public POST; write endpoints need auth",
+    "path": "endpoints[0].auth",
+  },
+]
+`;
+
+exports[`specs/broken/readonly-unsettable.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "readonly-unsettable",
+    "level": "error",
+    "message": "Thing.code is required and readOnly with no default, so creating a Thing would fail",
+    "path": "entities[1].fields[0]",
+  },
+]
+`;
+
+exports[`specs/broken/reserved-name.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "reserved-name",
+    "level": "error",
+    "message": ""createdAt" is reserved in Thing; the compiler generates it",
+    "path": "entities[0].fields[0]",
+  },
+  {
+    "code": "reserved-name",
+    "level": "error",
+    "message": ""ownerId" is reserved in Thing; the compiler generates it",
+    "path": "entities[0].relations[0]",
+  },
+  {
+    "code": "reserved-name",
+    "level": "error",
+    "message": "endpoint id auth.logout: the auth. prefix is reserved for generated auth endpoints",
+    "path": "endpoints[0].id",
+  },
+]
+`;
+
+exports[`specs/broken/setnull-required.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "setnull-required",
+    "level": "error",
+    "message": "Child.parent is required, so onDelete can't be setNull",
+    "path": "entities[1].relations[0].onDelete",
+  },
+]
+`;
+
+exports[`specs/broken/slot-ref.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "slot-ref",
+    "level": "error",
+    "message": "custom endpoint reports.run must declare a slot",
+    "path": "endpoints[0]",
+  },
+  {
+    "code": "slot-ref",
+    "level": "error",
+    "message": "job nightly names unknown slot "nightlyCleanup"",
+    "path": "jobs[0].slot",
+  },
+  {
+    "code": "slot-ref",
+    "level": "error",
+    "message": "custom page dashboard must declare a slot",
+    "path": "pages[0]",
+  },
+  {
+    "code": "slot-ref",
+    "level": "error",
+    "message": "page reports has layout list; only custom pages take a slot",
+    "path": "pages[1].slot",
+  },
+]
+`;
+
+exports[`specs/broken/unknown-endpoint.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "unknown-endpoint",
+    "level": "error",
+    "message": "page login uses unknown endpoint "auth.login" (auth endpoints need an auth block)",
+    "path": "pages[0].uses[0]",
+  },
+  {
+    "code": "unknown-endpoint",
+    "level": "error",
+    "message": "page login uses unknown endpoint "things.list"",
+    "path": "pages[0].uses[1]",
+  },
+]
+`;
+
+exports[`specs/broken/unknown-entity.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "unknown-entity",
+    "level": "error",
+    "message": "endpoint ghosts.haunt uses unknown entity "Ghost"",
+    "path": "endpoints[0].entity",
+  },
+  {
+    "code": "unknown-entity",
+    "level": "error",
+    "message": "slot haunt returns unknown entity "Ghost"",
+    "path": "slots[0].output.entity",
+  },
+]
+`;
+
+exports[`specs/broken/unknown-relation-target.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "unknown-relation-target",
+    "level": "error",
+    "message": "relation Thing.parent targets unknown entity "Missing"",
+    "path": "entities[0].relations[0].target",
+  },
+]
+`;
+
+exports[`specs/broken/unknown-role.ts > fires its own rule and nothing else 1`] = `
+[
+  {
+    "code": "unknown-role",
+    "level": "error",
+    "message": "endpoint things.list requires role "editor", which isn't in auth.roles",
+    "path": "endpoints[0].auth.role",
+  },
+]
+`;

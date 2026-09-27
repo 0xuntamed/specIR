@@ -67,22 +67,39 @@ Anything the reference specs need that the IR can't express cleanly should becom
 a slot, not a new IR feature. Flag those cases to me.
 
 ## Validator rules (each returns { level: error|warning, code, path, message })
-1. Duplicate entity / endpoint / page / job / slot ids
-2. Relation target entity doesn't exist
-3. Enum field with no values
-4. Auth userEntity missing, or lacks a unique email field
-5. Non-public endpoint/page but no auth block defined
-6. Public write endpoint (POST/PUT/PATCH/DELETE) → error
-7. crud endpoint: entity missing, or op doesn't match HTTP method
-8. Duplicate method + path
-9. get/update/delete crud path missing :id param
-10. custom endpoint or job without a slot
-11. Page uses an endpoint id that doesn't exist
-12. Public page uses an authed endpoint → warning
-13. Invalid cron expression (basic 5-field check)
-14. Job idempotency key refers to a field that isn't unique
-15. scope "owner" on an entity not owned by the user entity
-Each rule gets a matching spec in specs/broken/ and a test proving it fires.
+One rule = one code = one file in `src/validate/rules/<code>.ts` = one spec in
+`specs/broken/<code>.ts`. `test/validate.test.ts` asserts each broken spec fires its own
+code and nothing else, and snapshots every message.
+
+1. `duplicate-id` — duplicate entity / endpoint / page / job / slot ids (also field/relation/FK
+   names within an entity, enum values, slot inputs)
+2. `unknown-relation-target` — relation target entity doesn't exist
+3. `empty-enum` — enum field (or slot input) with no values
+4. `auth-user-entity` — auth userEntity missing, or lacks a required unique email field
+5. `auth-required` — non-public endpoint/page, or owned entity, but no auth block defined
+6. `public-write` — public write endpoint (POST/PUT/PATCH/DELETE)
+7. `crud-mismatch` — crud entity missing, op doesn't match HTTP method, or pagination on non-list
+8. `duplicate-route` — duplicate method + path (param names ignored; includes auth endpoints
+   and page routes)
+9. `crud-missing-id` — get/update/delete crud path missing :id param
+10. `slot-ref` — custom endpoint, custom page or job without an existing slot; slot on a non-custom page
+11. `unknown-endpoint` — page uses an endpoint id that doesn't exist
+12. `public-page-uses-authed` — public page uses an authed endpoint (warning)
+13. `invalid-cron` — invalid cron expression (basic 5-field numeric check; no MON/JAN names)
+14. `idempotency-key` — job idempotency key entity/field missing or not unique
+15. `owner-scope` — scope "owner" on an entity that isn't owned, or on a public endpoint
+
+Extra rules enforcing the decisions log:
+- `reserved-name` — field/relation/FK named like a generated column; `auth.*` endpoint ids
+- `hasmany-inverse` — hasMany target needs exactly one belongsTo pointing back
+- `setnull-required` — onDelete setNull on a required belongsTo
+- `readonly-unsettable` — required readOnly field with no default on an entity created over HTTP
+- `unknown-role` — `{ role }` access naming a role not in auth.roles
+- `crud-path-param` — :id on list/create, or a crud param that isn't a belongsTo FK
+- `custom-path-param` — custom path param not a slot input, or missing the `:<entity>Id` param
+- `unknown-entity` — custom endpoint `entity` or slot output entity doesn't exist
+
+Schema (Zod) errors stop validation and are reported as `schema.<zod issue code>`.
 
 ## Reference spec 1: Invoice Reminder (primary test case)
 Entities: User, Client, Invoice, LineItem, Reminder.
@@ -175,3 +192,7 @@ These refine or override the requirements above.
 - **`entity` on custom endpoints** (added to IR): the generated handler loads the row named by
   `:<entity>Id` (e.g. `:invoiceId`), 404s if missing or not owned by the current user, and passes
   it to the slot. Authorization never depends on slot (agent) code.
+
+### 2026-09-27 — milestone 2
+- Page layout rules (form = create xor get+update, list needs a list endpoint, …) are deferred
+  to milestone 5, where the React generator defines what it actually needs.
