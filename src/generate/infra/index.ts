@@ -84,7 +84,9 @@ export function envExample(spec: Spec): string {
     "WEB_PORT=8080",
   ];
   if (spec.auth) lines.push("# At least 32 random characters, e.g. `openssl rand -hex 32`.", "JWT_SECRET=");
-  if (spec.integrations.some((i) => i.kind === "email")) lines.push("RESEND_API_KEY=", "EMAIL_FROM=");
+  if (spec.integrations.some((i) => i.kind === "email")) {
+    lines.push("# Leave RESEND_API_KEY empty in development: emails are logged instead of sent.", "RESEND_API_KEY=", "EMAIL_FROM=");
+  }
   return `${lines.join("\n")}\n`;
 }
 

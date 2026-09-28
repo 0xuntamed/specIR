@@ -302,3 +302,25 @@ api/src/lib/{errors,load,context}.ts    api/src/slots/<slotId>.ts      api/src/i
   user-owned files (incl. `.env` and a hand-written migration), change the spec (new field,
   reworded intent, two slots removed), regenerate, and check preservation, propagation,
   deletion, orphan reporting and idempotence.
+
+## Phase 2: agents fill slots (started 2026-09-28)
+Supersedes "no LLM calls anywhere" for `src/agent/` only. Validation and generation stay
+deterministic and LLM-free; the agent runs after generation and only writes slot regions.
+
+- `appspec fill <spec> --out <dir> [--slot <id>]...` generates first, then fills each untouched
+  slot (backend `api/src/slots/*.ts` and custom-page `web/src/slots/*.tsx`), sequentially.
+- **Containment:** the model returns only `{ imports, body, summary }` (structured output); the
+  tool splices them into the slot's two regions. It never writes files itself.
+- **Gates:** bare imports must be Node built-ins (`node:`) or declared dependencies; then the whole
+  project must typecheck (`tsc` in api/ incl. the contract check, or web/). Errors go back to the
+  model; up to 3 attempts, then the stub is restored and the slot reported as failed. The project
+  must typecheck before filling starts, so the model is never blamed for existing errors.
+- **Model:** `claude-opus-5` (`src/agent/model.ts`), adaptive thinking, effort `high`, streaming,
+  server-side refusal fallback (`fallbacks: "default"`). Rules + stable project files are the
+  cached system prompt; the slot brief (intent, slot file, sibling slot signatures) is the user turn.
+- **Logs:** `<out>/.appspec/agent/<slot>.json` records every attempt (proposal, problems, usage).
+- **Credentials:** `ANTHROPIC_API_KEY` from the environment or a gitignored `.env` in the repo root.
+- `@anthropic-ai/sdk` is a runtime dependency of the compiler (not of generated apps).
+- Generated apps: `sendEmail` logs instead of sending when `RESEND_API_KEY` is empty (development).
+- Not yet: behavioural acceptance tests per slot (typecheck is the only automatic gate), slots
+  declaring npm dependencies (a PDF library, say), parallel filling.

@@ -109,6 +109,7 @@ export class NotImplemented extends Error {
 
 export function emailModule(): string {
   return `${HEADER}
+import { randomUUID } from "node:crypto";
 import { env } from "../env.js";
 
 export type EmailMessage = {
@@ -120,9 +121,16 @@ export type EmailMessage = {
 };
 
 // Sends through Resend's HTTP API. With an idempotencyKey, a retried send
-// returns the original result instead of emailing twice.
+// returns the original result instead of emailing twice. Without a
+// RESEND_API_KEY (development), the email is logged instead of sent.
 export async function sendEmail(message: EmailMessage, options: { idempotencyKey?: string } = {}): Promise<{ id: string }> {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) throw new Error("RESEND_API_KEY and EMAIL_FROM must be set to send email");
+  if (!env.RESEND_API_KEY) {
+    const to = Array.isArray(message.to) ? message.to.join(", ") : message.to;
+    const files = message.attachments?.map((a) => \`\${a.filename} (\${a.content.length} bytes)\`).join(", ") ?? "none";
+    console.warn(\`[email not sent: RESEND_API_KEY is unset] to=\${to} subject=\${JSON.stringify(message.subject)} attachments=\${files}\`);
+    return { id: \`logged-\${randomUUID()}\` };
+  }
+  if (!env.EMAIL_FROM) throw new Error("EMAIL_FROM must be set to send email");
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
