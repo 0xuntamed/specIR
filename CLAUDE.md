@@ -324,3 +324,22 @@ deterministic and LLM-free; the agent runs after generation and only writes slot
 - Generated apps: `sendEmail` logs instead of sending when `RESEND_API_KEY` is empty (development).
 - Not yet: behavioural acceptance tests per slot (typecheck is the only automatic gate), slots
   declaring npm dependencies (a PDF library, say), parallel filling.
+- **Status:** paused before the first real run (2026-09-28); tested with a fake model only.
+
+## Studio: form builder for specs (2026-09-28)
+`npm run studio` → http://localhost:5173. A local React app in `studio/` (dev-only deps: react,
+react-dom, @vitejs/plugin-react, @types/react*; Vite was already here).
+- **Runs the real compiler in the browser:** `validate()` and `generate()` are imported from
+  `src/` and run on every edit (deferred), so problems and the generated-file preview are live.
+  Only `src/generate/write.ts`, `src/cli.ts` and `src/agent/` touch Node APIs; keep it that way.
+- **Local API** (Vite plugin in `studio/vite.config.ts`, dev server only): list/read/save specs
+  in `specs/`, and generate into `out/<name>` via `writeFiles`. Spec names must be kebab-case
+  (they become file paths). Hand-written `.ts` specs open read-only; saving makes a `.json` copy.
+- **Specs saved by the studio are JSON** (`specs/<name>.json`); the CLI accepts `.json` and `.ts`.
+- **Edits** (`studio/src/edits.ts`, pure, tested): `newSpec` (auth + User + login/register),
+  `addResource` (entity + 5 CRUD endpoints + list/new/edit pages; equals the hand-written Notes
+  spec), and renames that update references. Renames don't rewrite URLs or slot inputs; the
+  validator points out conventions like `:<entity>Id`.
+- Panels: Problems (click → the item), Files (preview; keeps the last valid output while the
+  spec has problems), Diagram (entities + belongsTo lines, plain SVG).
+- Not yet: drag-and-drop layout, undo, reordering items, running the generated app from the UI.

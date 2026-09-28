@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { fill } from "./agent/fill";
@@ -26,8 +26,11 @@ if (!file || !["validate", "generate", "fill"].includes(command ?? "") || (comma
   process.exit(2);
 }
 
-const mod = await import(pathToFileURL(resolve(file)).href);
-const { spec, diagnostics } = validate(mod.default);
+// Specs are TS modules (export default defineSpec(...)) or JSON saved by the studio.
+const input: unknown = file.endsWith(".json")
+  ? JSON.parse(readFileSync(file, "utf8"))
+  : (await import(pathToFileURL(resolve(file)).href)).default;
+const { spec, diagnostics } = validate(input);
 
 for (const d of diagnostics) {
   console.log(`${d.level} ${d.code} at ${d.path}: ${d.message}`);
