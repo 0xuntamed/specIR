@@ -1,6 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { backendSlots } from "../generate/backend-node/slots";
 import { isStub, REGION, regionsOf } from "../generate/regions";
@@ -22,19 +21,27 @@ export const Proposal = z.object({
 });
 export type Proposal = z.infer<typeof Proposal>;
 
+// One conversation with one model. Assistant turns hold whatever that model
+// returned (Claude's content blocks, OpenRouter's text), echoed back on retries.
+export type Turn = { role: "user"; content: string } | { role: "assistant"; content: unknown };
+
 export type ModelReply = {
   proposal: Proposal | null;
-  content: Anthropic.Beta.BetaContentBlockParam[]; // echoed back verbatim on retries
+  error?: string; // why there's no proposal, when the model adapter can tell
+  content: unknown;
+  model: string; // the model that answered (OpenRouter may fall back to another)
   stopReason: string | null;
   usage: { input: number; output: number; cacheRead: number; cacheWrite: number };
 };
 
-export type Model = (request: { project: Project; messages: Anthropic.Beta.BetaMessageParam[] }) => Promise<ModelReply>;
+export type Model = (request: { project: Project; messages: Turn[] }) => Promise<ModelReply>;
 
 // Returns problems (e.g. tsc errors); an empty list means the project is fine.
 export type Verifier = (project: Project) => Promise<string[]>;
 
 export type SlotResult = { id: string; status: "filled" | "failed" | "skipped"; attempts: number; detail: string };
+
+type Attempt = { attempt: number; problems: string[] } & Partial<Pick<ModelReply, "model" | "proposal" | "stopReason" | "usage">>;
 
 export function slotTargets(spec: Spec): SlotTarget[] {
   const backend = backendSlots(spec).map(({ slot }) => ({ slot, project: "api" as const, file: `api/src/slots/${slot.id}.ts` }));
@@ -148,18 +155,25 @@ export async function fill(options: FillOptions): Promise<SlotResult[]> {
     }
 
     const packages = packagesOf(outDir, target.project);
-    const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: "user", content: brief(outDir, target, targets) }];
-    const log: unknown[] = [];
+    const messages: Turn[] = [{ role: "user", content: brief(outDir, target, targets) }];
+    const log: Attempt[] = [];
     let result: SlotResult | undefined;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       onProgress(`${target.slot.id}: attempt ${attempt}`);
-      const reply = await model({ project: target.project, messages });
+      let reply: ModelReply;
+      try {
+        reply = await model({ project: target.project, messages });
+      } catch (err) {
+        // Rate limit, network or provider error: give up on this slot, go on to the next.
+        log.push({ attempt, problems: [`model request failed: ${err instanceof Error ? err.message : String(err)}`] });
+        break;
+      }
       messages.push({ role: "assistant", content: reply.content });
 
       let problems: string[];
       if (!reply.proposal) {
-        problems = [`the response had no valid proposal (stop reason: ${reply.stopReason})`];
+        problems = [reply.error ?? `the response had no valid proposal (stop reason: ${reply.stopReason})`];
       } else {
         problems = proposalProblems(reply.proposal, packages);
         if (problems.length === 0) {
@@ -167,7 +181,8 @@ export async function fill(options: FillOptions): Promise<SlotResult[]> {
           problems = await verify(target.project);
         }
       }
-      log.push({ attempt, proposal: reply.proposal, problems, stopReason: reply.stopReason, usage: reply.usage });
+      log.push({ attempt, model: reply.model, proposal: reply.proposal, problems, stopReason: reply.stopReason, usage: reply.usage });
+      onProgress(`${target.slot.id}: attempt ${attempt} (${reply.model}): ${problems.length === 0 ? "passed" : `${problems.length} problem(s)`}`);
 
       if (problems.length === 0) {
         result = { id: target.slot.id, status: "filled", attempts: attempt, detail: reply.proposal!.summary };
@@ -181,8 +196,7 @@ export async function fill(options: FillOptions): Promise<SlotResult[]> {
 
     if (!result) {
       writeFileSync(path, original);
-      const last = log[log.length - 1] as { problems: string[] };
-      result = { id: target.slot.id, status: "failed", attempts: maxAttempts, detail: last.problems[0] ?? "unknown" };
+      result = { id: target.slot.id, status: "failed", attempts: log.length, detail: log[log.length - 1]?.problems[0] ?? "unknown" };
     }
     // Every prompt, answer and check, for debugging and replay.
     const logFile = join(outDir, ".appspec", "agent", `${target.slot.id}.json`);

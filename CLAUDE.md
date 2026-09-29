@@ -315,16 +315,33 @@ deterministic and LLM-free; the agent runs after generation and only writes slot
   project must typecheck (`tsc` in api/ incl. the contract check, or web/). Errors go back to the
   model; up to 3 attempts, then the stub is restored and the slot reported as failed. The project
   must typecheck before filling starts, so the model is never blamed for existing errors.
-- **Model:** `claude-opus-5` (`src/agent/model.ts`), adaptive thinking, effort `high`, streaming,
-  server-side refusal fallback (`fallbacks: "default"`). Rules + stable project files are the
-  cached system prompt; the slot brief (intent, slot file, sibling slot signatures) is the user turn.
+- **Models** (`--model`, default: free OpenRouter models, since 2026-09-29). `fill.ts` is
+  provider-neutral: a `Model` takes `Turn[]` (assistant turns are the adapter's own opaque content)
+  and returns a `ModelReply`. Shared instructions and project files: `src/agent/prompt.ts`.
+  - `claude.ts`: `--model claude-opus-5` (`ANTHROPIC_API_KEY`). Adaptive thinking, effort `high`,
+    streaming, structured output via Zod, server-side refusal fallback (`fallbacks: "default"`).
+    Rules + stable project files are the cached system prompt.
+  - `openrouter.ts`: any id with a `/` (`OPENROUTER_API_KEY`). Default `FREE_MODELS`, sent as
+    OpenRouter's `models` fallback list (the next one answers if one errors); repeat `--model` for
+    your own list. Plain `fetch` over SSE (no SDK dependency; streaming avoids header timeouts on
+    slow free models). Replies use `<imports>/<body>/<summary>` tags instead of structured output:
+    code in JSON strings needs escaping that small models get wrong, and not every free model
+    supports schemas. Retries 429/5xx/mid-stream errors up to 4 tries (Retry-After, else 5s
+    doubling, never waiting >60s); the free daily cap isn't retried. Errors carry hints (daily
+    cap, data-policy privacy settings, bad key).
+  - `appspec models` lists today's free text models (public endpoint, no key); free models change
+    often, and it warns when a default is gone.
+- The slot brief (intent, slot file, sibling slot signatures) is the user turn for every model.
+- A model request that throws (rate limit, network) fails that slot, restores its stub and moves on.
 - **Logs:** `<out>/.appspec/agent/<slot>.json` records every attempt (proposal, problems, usage).
-- **Credentials:** `ANTHROPIC_API_KEY` from the environment or a gitignored `.env` in the repo root.
+- **Credentials:** `OPENROUTER_API_KEY` / `ANTHROPIC_API_KEY` from the environment or a gitignored
+  `.env` in the repo root, checked before generating.
 - `@anthropic-ai/sdk` is a runtime dependency of the compiler (not of generated apps).
 - Generated apps: `sendEmail` logs instead of sending when `RESEND_API_KEY` is empty (development).
 - Not yet: behavioural acceptance tests per slot (typecheck is the only automatic gate), slots
   declaring npm dependencies (a PDF library, say), parallel filling.
-- **Status:** paused before the first real run (2026-09-28); tested with a fake model only.
+- **Status:** paused before the first real run (2026-09-28); tested with fake models only
+  (`test/fill.test.ts`, `test/openrouter.test.ts` with a fake fetch).
 
 ## Studio: form builder for specs (2026-09-28)
 `npm run studio` → http://localhost:5173. A local React app in `studio/` (dev-only deps: react,

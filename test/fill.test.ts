@@ -1,9 +1,8 @@
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it } from "vitest";
-import { fill, slotTargets, type Model, type ModelReply, type Proposal, type Verifier } from "../src/agent/fill";
+import { fill, slotTargets, type Model, type ModelReply, type Proposal, type Turn, type Verifier } from "../src/agent/fill";
 import { generate } from "../src/generate/index";
 import { REGION, regionsOf } from "../src/generate/regions";
 import { writeFiles } from "../src/generate/write";
@@ -21,18 +20,21 @@ function generated(): string {
 
 const reply = (proposal: Proposal): ModelReply => ({
   proposal,
-  content: [{ type: "text", text: JSON.stringify(proposal) }],
+  content: JSON.stringify(proposal),
+  model: "fake",
   stopReason: "end_turn",
   usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 });
 const good: Proposal = { imports: 'import { eq } from "drizzle-orm";', body: "  void eq;\n  return input.invoice;", summary: "returns it" };
 
 // A model that replays canned replies and records what it was sent.
-function fakeModel(replies: ModelReply[]) {
-  const calls: Anthropic.Beta.BetaMessageParam[][] = [];
+function fakeModel(replies: (ModelReply | Error)[]) {
+  const calls: Turn[][] = [];
   const model: Model = async ({ messages }) => {
     calls.push(structuredClone(messages));
-    return replies.shift()!;
+    const next = replies.shift()!;
+    if (next instanceof Error) throw next;
+    return next;
   };
   return { model, calls };
 }
@@ -47,7 +49,7 @@ function fakeVerifier(results: string[][]) {
   return { verify, count: () => count };
 }
 
-const lastUserText = (messages: Anthropic.Beta.BetaMessageParam[]) => String(messages[messages.length - 1]!.content);
+const lastUserText = (messages: Turn[]) => String(messages[messages.length - 1]!.content);
 const outsideRegions = (text: string) => text.replace(REGION, "$1$4");
 
 describe("fill", () => {
@@ -85,6 +87,16 @@ describe("fill", () => {
     expect(readFileSync(join(dir, SLOT), "utf8")).toBe(before);
     const log = JSON.parse(readFileSync(join(dir, ".appspec/agent/markInvoicePaid.json"), "utf8"));
     expect(log.attempts).toHaveLength(3);
+  });
+
+  it("restores the stub and moves on when the model request fails mid-slot", async () => {
+    const dir = generated();
+    const before = readFileSync(join(dir, SLOT), "utf8");
+    const { model } = fakeModel([reply({ ...good, body: "  return 42;" }), new Error("OpenRouter 429: Rate limit exceeded")]);
+    const results = await fill({ outDir: dir, spec, model, verify: fakeVerifier([[], ["error TS2322"]]).verify, only: ["markInvoicePaid"] });
+
+    expect(results[0]).toEqual({ id: "markInvoicePaid", status: "failed", attempts: 2, detail: "model request failed: OpenRouter 429: Rate limit exceeded" });
+    expect(readFileSync(join(dir, SLOT), "utf8")).toBe(before); // not the rejected first attempt
   });
 
   it("rejects undeclared packages before writing or typechecking", async () => {

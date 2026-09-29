@@ -1,10 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { Proposal, type Model, type Project } from "./fill";
+import type { Project } from "./fill";
 
-export const MODEL = "claude-opus-5";
+// The instructions and project files every model gets, whoever serves it.
 
 const COMMON = `You implement a "slot": one function in an app that the AppSpec compiler generated from a spec. The compiler writes every other file. A slot holds logic the spec could only describe in plain English (its intent). Your code is placed into the slot file between its marker comments; nothing else in the file or project changes.
 
@@ -17,7 +15,7 @@ Your code is kept only if the whole project still typechecks (tsc, strict) and e
 
 Implement the intent completely, with no placeholders, TODOs or mock behavior. Keep it as simple as the intent allows.`;
 
-const RULES: Record<Project, string> = {
+export const RULES: Record<Project, string> = {
   api: `${COMMON}
 
 This is the backend: Fastify, Drizzle ORM over node-postgres, and Zod, shown below.
@@ -34,7 +32,7 @@ This is the frontend: React 19, react-router and Vite, shown below. It talks to 
 };
 
 // Project files any slot may need. They don't change while slots are being
-// filled, so they sit in the cached part of the prompt.
+// filled, so they can sit in the cached part of the prompt.
 function projectFiles(outDir: string, project: Project): string[] {
   if (project === "web") {
     return ["web/package.json", "contract/client.ts", "web/src/api.ts", "web/src/components/kit.tsx", "web/src/lib/fields.ts", "web/src/lib/hooks.ts", "web/src/styles.css"];
@@ -52,44 +50,9 @@ function projectFiles(outDir: string, project: Project): string[] {
   ];
 }
 
-function projectContext(outDir: string, project: Project): string {
+export function projectContext(outDir: string, project: Project): string {
   return projectFiles(outDir, project)
     .filter((path) => existsSync(join(outDir, path)))
     .map((path) => `<file path="${path}">\n${readFileSync(join(outDir, path), "utf8").trimEnd()}\n</file>`)
     .join("\n\n");
-}
-
-export function claudeModel(outDir: string, client = new Anthropic()): Model {
-  const contexts = new Map<Project, string>();
-  return async ({ project, messages }) => {
-    const context = contexts.get(project) ?? projectContext(outDir, project);
-    contexts.set(project, context);
-    const stream = client.beta.messages.stream({
-      model: MODEL,
-      max_tokens: 64000,
-      thinking: { type: "adaptive" },
-      output_config: { effort: "high", format: betaZodOutputFormat(Proposal) },
-      // If a safety classifier declines, the API retries on a fallback model in the same call.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      system: [
-        { type: "text", text: RULES[project] },
-        { type: "text", text: context, cache_control: { type: "ephemeral" } },
-      ],
-      messages,
-    });
-    const message = await stream.finalMessage();
-    const usage = message.usage;
-    return {
-      proposal: message.stop_reason === "refusal" ? null : message.parsed_output,
-      content: message.content,
-      stopReason: message.stop_reason,
-      usage: {
-        input: usage.input_tokens,
-        output: usage.output_tokens,
-        cacheRead: usage.cache_read_input_tokens ?? 0,
-        cacheWrite: usage.cache_creation_input_tokens ?? 0,
-      },
-    };
-  };
 }

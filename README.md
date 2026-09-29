@@ -122,7 +122,7 @@ Three ideas make it more than a code template:
 
 ```bash
 npm install
-npm test          # 165 tests, a few seconds
+npm test          # 177 tests, a few seconds
 ```
 
 ### Option A: build a spec in the Studio
@@ -258,26 +258,39 @@ Until a slot is filled, calling it returns **501 Not Implemented** and
 everything around it works. You write the code between the two markers
 yourself, or let the agent do it.
 
-### Filling slots with an AI agent (experimental, paused)
+### Filling slots with an AI agent (experimental)
 
 ```bash
 npm run appspec -- fill specs/invoice-reminder.ts --out out/invoice-reminder
 ```
 
-For each empty slot, Claude (`claude-opus-5`) gets the slot's instructions and
-the relevant project code, and returns only the code for that slot's two
-marked regions. The agent can't edit any other file. Its code is kept only if:
+For each empty slot, a model gets the slot's instructions and the relevant
+project code, and returns only the code for that slot's two marked regions.
+The agent can't edit any other file. Its code is kept only if:
 
 - every import is a Node built-in or a declared package, and
 - the whole project still typechecks, including the client/server contract check.
 
-If a check fails, the errors go back to Claude, for up to 3 attempts. After
+If a check fails, the errors go back to the model, for up to 3 attempts. After
 that, the slot is reset to its stub and reported. Every attempt is logged to
-`.appspec/agent/<slot>.json`.
+`.appspec/agent/<slot>.json`, including which model answered.
 
-**To use it:** put `ANTHROPIC_API_KEY=...` in a `.env` file at the repo root. It
-is gitignored. **Status:** built and tested against a fake model, but not yet
-run against the real API.
+**Which model:**
+
+| | Models | Key in `.env` (gitignored) |
+|---|---|---|
+| Default | Free models on [OpenRouter](https://openrouter.ai): `qwen/qwen3.8-27b:free`, then `nvidia/nemotron-3-ultra-550b-a55b:free`, then `poolside/laguna-s-2.1:free` if the one before fails | `OPENROUTER_API_KEY` ([get one free](https://openrouter.ai/keys)) |
+| `--model <vendor/model>` | Any OpenRouter model; repeat the flag to set your own fallback order | `OPENROUTER_API_KEY` |
+| `--model claude-opus-5` | Claude, through Anthropic's API (paid) | `ANTHROPIC_API_KEY` |
+
+`npm run appspec -- models` lists today's free OpenRouter models; the list
+changes often. Free models come with limits: 20 requests a minute and 50 a
+day (1000 once you've bought $10 of credits), and some providers log or train
+on prompts, which your
+[privacy settings](https://openrouter.ai/settings/privacy) must allow. Rate
+limits are retried briefly. The daily cap isn't retried.
+
+**Status:** built and tested against fake models; not yet run against a real one.
 
 ---
 
@@ -309,7 +322,8 @@ so after changing entities you must reset the database
 |---|---|
 | `npm run appspec -- validate <spec>` | Check a spec (`.ts` or `.json`) and list problems |
 | `npm run appspec -- generate <spec> --out <dir>` | Generate the app (safe to re-run) |
-| `npm run appspec -- fill <spec> --out <dir> [--slot <id>]` | Fill empty slots with Claude (needs an API key) |
+| `npm run appspec -- fill <spec> --out <dir> [--slot <id>] [--model <id>]` | Fill empty slots with an AI model (free OpenRouter models by default; needs an API key) |
+| `npm run appspec -- models` | List the free OpenRouter models available today |
 | `npm run studio` | Open the Studio on http://localhost:5173 |
 | `npm test` | Run all tests |
 | `npm run typecheck` | Typecheck the compiler and the Studio |
@@ -323,7 +337,7 @@ src/
   ir/           the spec format: Zod schema, types, page rules
   validate/     the 24 validation rules, one file each
   generate/     backend-node/, contract/, frontend-react/, infra/, plus the safe file writer
-  agent/        the slot-filling agent (the only code that calls an AI model)
+  agent/        the slot-filling agent (the only code that calls an AI model): Claude and OpenRouter
   cli.ts
 studio/         the Studio (React), with a small local API for saving specs and generating
 specs/          notes.ts, invoice-reminder.ts, and broken/ (one deliberately broken spec per rule)
@@ -354,7 +368,7 @@ made along the way, is in [`CLAUDE.md`](CLAUDE.md).
 | ✅ Frontend generator | React pages from the spec, served by nginx |
 | ✅ Safe regeneration | Golden tests, slot preservation, stale-file cleanup |
 | ✅ Studio | Form builder with live validation and file preview |
-| ⏸️ AI slot filling | Built and tested offline; first real run pending |
+| ⏸️ AI slot filling | Free OpenRouter models or Claude; tested offline, first real run pending |
 | ⬜ Upgrade migrations | Keep the data when the spec changes |
 | ⬜ Studio: drag-and-drop canvas | The diagram is view-only today |
 | ⬜ Go backend | A second backend from the same spec |
