@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "task-tracker",
+    "backend": "node",
+    "database": "postgres"
+  },
+  "auth": {
+    "strategy": "email_password_jwt",
+    "userEntity": "User"
+  },
+  "entities": [
+    {
+      "name": "User",
+      "fields": [
+        {
+          "name": "email",
+          "type": "email",
+          "required": true,
+          "unique": true
+        }
+      ]
+    }
+  ],
+  "endpoints": [],
+  "pages": [
+    {
+      "id": "login",
+      "route": "/login",
+      "auth": "public",
+      "layout": "form",
+      "uses": [
+        "auth.login"
+      ]
+    },
+    {
+      "id": "register",
+      "route": "/register",
+      "auth": "public",
+      "layout": "form",
+      "uses": [
+        "auth.register"
+      ]
+    }
+  ],
+  "slots": [],
+  "jobs": []
+}
