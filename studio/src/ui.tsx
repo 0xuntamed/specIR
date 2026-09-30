@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Icon, type IconName } from "./icons";
 
 // Small labelled inputs. Values are plain strings/booleans; forms convert.
 
@@ -69,16 +70,34 @@ export function ListInput(props: { value: string[]; onChange: (value: string[]) 
   );
 }
 
-export function FormHead(props: { title: string; onDelete?: () => void; children?: ReactNode }) {
+// The item's own name is the heading; `kind` says what it is.
+export function FormHead(props: { title: string; kind?: string; icon?: IconName; onDelete?: () => void; children?: ReactNode }) {
   return (
     <header className="form-head">
+      {props.icon && (
+        <span className="form-icon">
+          <Icon name={props.icon} size={18} />
+        </span>
+      )}
       <h2>{props.title}</h2>
+      {props.kind && <span className="chip">{props.kind}</span>}
+      <span className="spacer" />
       {props.children}
       {props.onDelete && (
-        <button className="danger" onClick={props.onDelete}>
+        <button className="btn ghost danger small" onClick={props.onDelete}>
+          <Icon name="trash" size={15} />
           Delete
         </button>
       )}
     </header>
+  );
+}
+
+export function AddButton(props: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="btn ghost small add" onClick={props.onClick}>
+      <Icon name="plus" size={15} />
+      {props.label}
+    </button>
   );
 }

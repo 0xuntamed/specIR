@@ -1,6 +1,7 @@
 import type { Access } from "../../src/ir/types";
 import { renameEndpoint, renameEntity, renameSlot, type EndpointIn, type FieldIn, type RelationIn, type SlotIn, type Spec } from "./edits";
-import { Area, Check, Choice, FormHead, ListInput, Text, type Option } from "./ui";
+import { Icon } from "./icons";
+import { AddButton, Area, Check, Choice, FormHead, ListInput, Text, type Option } from "./ui";
 
 export type Section = "settings" | "entities" | "endpoints" | "pages" | "jobs" | "slots";
 export type Selection = { section: Section; index: number };
@@ -78,8 +79,8 @@ function FieldRow(props: { field: FieldIn; onChange: (field: FieldIn) => void; o
         </>
       )}
       <td>
-        <button className="icon" title="Remove" aria-label={`Remove ${label}`} onClick={props.onRemove}>
-          ×
+        <button type="button" className="icon-button remove" title="Remove" aria-label={`Remove ${label}`} onClick={props.onRemove}>
+          <Icon name="x" size={15} />
         </button>
       </td>
     </tr>
@@ -90,38 +91,45 @@ export function FieldTable(props: { fields: FieldIn[]; onChange: (fields: FieldI
   const { fields, onChange } = props;
   return (
     <>
-      <table className="grid">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Enum values</th>
-            <th>Req.</th>
-            {!props.param && (
-              <>
-                <th>Unique</th>
-                <th>Read-only</th>
-                <th>Default</th>
-              </>
+      <div className="table-wrap">
+        <table className="grid">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Enum values</th>
+              <th>Req.</th>
+              {!props.param && (
+                <>
+                  <th>Unique</th>
+                  <th>Read-only</th>
+                  <th>Default</th>
+                </>
+              )}
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {fields.length === 0 && (
+              <tr>
+                <td className="empty-row" colSpan={props.param ? 5 : 8}>
+                  {props.param ? "No inputs. The slot gets only what its caller passes in." : "No fields yet. Add the columns this entity stores."}
+                </td>
+              </tr>
             )}
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {fields.map((f, i) => (
-            <FieldRow
-              key={i}
-              field={f}
-              param={props.param}
-              onChange={(next) => onChange(fields.map((old, j) => (j === i ? next : old)))}
-              onRemove={() => onChange(fields.filter((_, j) => j !== i))}
-            />
-          ))}
-        </tbody>
-      </table>
-      <button className="add" onClick={() => onChange([...fields, { name: "", type: "string" }])}>
-        + {props.param ? "Input" : "Field"}
-      </button>
+            {fields.map((f, i) => (
+              <FieldRow
+                key={i}
+                field={f}
+                param={props.param}
+                onChange={(next) => onChange(fields.map((old, j) => (j === i ? next : old)))}
+                onRemove={() => onChange(fields.filter((_, j) => j !== i))}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <AddButton label={props.param ? "Add input" : "Add field"} onClick={() => onChange([...fields, { name: "", type: "string" }])} />
     </>
   );
 }
@@ -152,8 +160,8 @@ function RelationRow(props: { relation: RelationIn; entities: string[]; onChange
         )}
       </td>
       <td>
-        <button className="icon" title="Remove" onClick={props.onRemove}>
-          ×
+        <button type="button" className="icon-button remove" title="Remove" aria-label={`Remove ${r.name || "relation"}`} onClick={props.onRemove}>
+          <Icon name="x" size={15} />
         </button>
       </td>
     </tr>
@@ -168,7 +176,7 @@ export function EntityForm(props: FormProps) {
   const relations = entity.relations ?? [];
   return (
     <div className="form">
-      <FormHead title="Entity" onDelete={remover(props, "entities")} />
+      <FormHead title={entity.name || "Untitled entity"} kind="Entity" icon="entity" onDelete={remover(props, "entities")} />
       <Text label="Name" value={entity.name} hint="PascalCase, e.g. LineItem. References follow renames." onChange={(v) => set((s) => renameEntity(s, entity.name, v))} />
       <div className="row">
         <Check label="Owned by the signed-in user" checked={entity.owned ?? false} onChange={(v) => edit((e) => void (e.owned = v))} />
@@ -178,34 +186,35 @@ export function EntityForm(props: FormProps) {
       <h3>Fields</h3>
       <FieldTable fields={entity.fields} onChange={(fields) => edit((e) => void (e.fields = fields))} />
       <h3>Relations</h3>
+      {relations.length === 0 && <p className="empty-note">No relations. Link this entity to another with belongsTo, and name the way back with hasMany.</p>}
       {relations.length > 0 && (
-        <table className="grid">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Kind</th>
-              <th>Target</th>
-              <th>Req.</th>
-              <th>On delete</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {relations.map((r, i) => (
-              <RelationRow
-                key={i}
-                relation={r}
-                entities={names}
-                onChange={(next) => edit((e) => void (e.relations![i] = next))}
-                onRemove={() => edit((e) => void e.relations!.splice(i, 1))}
-              />
-            ))}
-          </tbody>
-        </table>
+        <div className="table-wrap">
+          <table className="grid">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Kind</th>
+                <th>Target</th>
+                <th>Req.</th>
+                <th>On delete</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {relations.map((r, i) => (
+                <RelationRow
+                  key={i}
+                  relation={r}
+                  entities={names}
+                  onChange={(next) => edit((e) => void (e.relations![i] = next))}
+                  onRemove={() => edit((e) => void e.relations!.splice(i, 1))}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      <button className="add" onClick={() => edit((e) => void (e.relations = [...(e.relations ?? []), { name: "", kind: "belongsTo", target: names[0]!, required: true }]))}>
-        + Relation
-      </button>
+      <AddButton label="Add relation" onClick={() => edit((e) => void (e.relations = [...(e.relations ?? []), { name: "", kind: "belongsTo", target: names[0]!, required: true }]))} />
     </div>
   );
 }
@@ -221,9 +230,9 @@ function SlotPicker(props: FormProps & { value: string | undefined; suggested: s
     <div className="row">
       <Choice label="Slot" value={props.value ?? ""} options={[["", "(none)"], ...slots]} onChange={(v) => props.onChange(v || undefined)} />
       {!props.value && (
-        <button className="add" onClick={create}>
-          + New slot
-        </button>
+        <span className="row-action">
+          <AddButton label="New slot" onClick={create} />
+        </span>
       )}
     </div>
   );
@@ -240,7 +249,7 @@ export function EndpointForm(props: FormProps) {
     replace(kind === "custom" ? { ...base, kind: "custom" } : { ...base, kind: "crud", entity: entities[0]!, op: "list", method: "GET", scope: "all" });
   return (
     <div className="form">
-      <FormHead title="Endpoint" onDelete={remover(props, "endpoints")} />
+      <FormHead title={ep.id || "Untitled endpoint"} kind="Endpoint" icon="endpoint" onDelete={remover(props, "endpoints")} />
       <div className="row">
         <Text label="Id" value={ep.id} hint="dotted, e.g. invoices.send" onChange={(v) => set((s) => renameEndpoint(s, ep.id, v))} />
         <Choice label="Kind" value={ep.kind} options={[["crud", "crud (generated)"], ["custom", "custom (slot)"]]} onChange={setKind} />
@@ -300,7 +309,7 @@ export function PageForm(props: FormProps) {
   const uses = page.uses ?? [];
   return (
     <div className="form">
-      <FormHead title="Page" onDelete={remover(props, "pages")} />
+      <FormHead title={page.route || page.id || "Untitled page"} kind="Page" icon="page" onDelete={remover(props, "pages")} />
       <div className="row">
         <Text label="Id" value={page.id} onChange={(v) => edit((p) => void (p.id = v))} />
         <Text label="Route" value={page.route} placeholder="/invoices/:id" onChange={(v) => edit((p) => void (p.route = v))} />
@@ -310,7 +319,7 @@ export function PageForm(props: FormProps) {
         <Choice label="Layout" value={page.layout} options={["list", "detail", "form", "custom"]} onChange={(v) => edit((p) => void (p.layout = v as "list"))} />
       </div>
       {page.layout === "custom" && <SlotPicker {...props} value={page.slot} suggested={page.id} onChange={(slot) => edit((p) => void (p.slot = slot))} />}
-      <h3>Uses endpoints</h3>
+      <h3>Endpoints it uses</h3>
       <div className="checks">
         {endpointIds.map((id) => (
           <Check key={id} label={id} checked={uses.includes(id)} onChange={(on) => edit((p) => void (p.uses = on ? [...uses, id] : uses.filter((u) => u !== id)))} />
@@ -326,7 +335,7 @@ export function JobForm(props: FormProps) {
   const edit = (fn: (j: NonNullable<Spec["jobs"]>[number]) => void) => set(mutate((s) => fn(s.jobs![index]!)));
   return (
     <div className="form">
-      <FormHead title="Job" onDelete={remover(props, "jobs")} />
+      <FormHead title={job.id || "Untitled job"} kind="Job" icon="job" onDelete={remover(props, "jobs")} />
       <div className="row">
         <Text label="Id" value={job.id} onChange={(v) => edit((j) => void (j.id = v))} />
         <Text label="Cron schedule" value={job.trigger.schedule} hint="5 fields, e.g. */5 * * * *" onChange={(v) => edit((j) => void (j.trigger.schedule = v))} />
@@ -352,8 +361,8 @@ export function SlotForm(props: FormProps) {
   ];
   return (
     <div className="form">
-      <FormHead title="Slot" onDelete={remover(props, "slots")} />
-      <p className="muted">Custom logic the compiler can't generate. Used by: {callers.length > 0 ? callers.join(", ") : "nothing yet"}.</p>
+      <FormHead title={slot.id || "Untitled slot"} kind="Slot" icon="slot" onDelete={remover(props, "slots")} />
+      <p className="lede">Custom logic the compiler can't generate. Used by {callers.length > 0 ? callers.join(", ") : "nothing yet"}.</p>
       <Text label="Id" value={slot.id} onChange={(v) => set((s) => renameSlot(s, slot.id, v))} />
       <Area label="Intent" rows={5} value={slot.intent} hint="What the code must do, in plain English. This is the brief an agent implements." onChange={(v) => edit((s) => void (s.intent = v))} />
       <h3>Inputs</h3>
@@ -385,7 +394,7 @@ export function SettingsForm(props: FormProps) {
   const email = (spec.integrations ?? []).some((i) => i.kind === "email");
   return (
     <div className="form">
-      <FormHead title="App settings" />
+      <FormHead title="App settings" icon="settings" />
       <Text label="App name" value={spec.app.name} hint="kebab-case; names the database and containers" onChange={(v) => edit((s) => void (s.app.name = v))} />
       <h3>Sign-in</h3>
       <Check

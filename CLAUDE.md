@@ -358,5 +358,12 @@ react-dom, @vitejs/plugin-react, @types/react*; Vite was already here).
   spec), and renames that update references. Renames don't rewrite URLs or slot inputs; the
   validator points out conventions like `:<entity>Id`.
 - Panels: Problems (click → the item), Files (preview; keeps the last valid output while the
-  spec has problems), Diagram (entities + belongsTo lines, plain SVG).
+  spec has problems), Diagram (entities + belongsTo arrows, plain SVG).
+- **Look (2026-09-30 polish):** tokens on `:root` in `studio/src/styles.css` (two surface layers,
+  semantic state colours, light + dark via `prefers-color-scheme`, all text pairs ≥ 4.5:1). Geist
+  and Geist Mono are self-hosted via `@fontsource-variable/*` (dev deps; no font CDN, works
+  offline). Icons are one hand-drawn SVG set in `icons.tsx`, not glyphs. Dialogs are native
+  `<dialog>` (`dialogs.tsx`); no `prompt()`/`confirm()`. Unsaved edits are guarded (switching
+  specs asks, closing the tab warns); Ctrl/Cmd+S saves. Layout: 3 columns ≥1100px, inspector
+  under the editor below that, and a navigation drawer ≤760px.
 - Not yet: drag-and-drop layout, undo, reordering items, running the generated app from the UI.
