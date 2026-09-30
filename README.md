@@ -13,6 +13,13 @@ needs a human (or, later, an AI agent) is logic too specific to describe as
 data, like "email this invoice as a PDF". AppSpec leaves clearly labelled empty
 boxes, called **slots**, for exactly those parts.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/studio-editor-dark.png">
+  <img alt="AppSpec Studio editing the Invoice Reminder spec: the Invoice entity's fields and relations in the middle, the spec's entities and endpoints in the sidebar, and a diagram of all five entities on the right" src="docs/screenshots/studio-editor-light.png">
+</picture>
+
+*The Studio, a form builder for specs, editing the Invoice Reminder app.*
+
 ---
 
 ## Contents
@@ -132,12 +139,29 @@ npm run studio    # opens on http://localhost:5173
 ```
 
 The Studio is a form builder for specs. Click **New app**, then
-**+ Add resource**, type `Task` and its fields, and you get the entity, its
+**Add resource**, type `Task` and its fields, and you get the entity, its
 five actions and its list, new and edit screens in one step. As you type:
 
 - **Problems** lists anything wrong, and clicking a problem jumps to it.
 - **Files** previews every file that will be generated.
 - **Diagram** shows your entities and how they relate.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/studio-problems-dark.png">
+  <img alt="The Studio after renaming the Invoice entity to Invoices: the Problems tab lists four errors, the three affected endpoints carry red badges in the sidebar, and Generate app is disabled" src="docs/screenshots/studio-problems-light.png">
+</picture>
+
+*Rename `Invoice` to `Invoices` and the Studio flags, as you type, the three
+custom endpoints whose URLs no longer carry `:invoicesId`, and a page that
+uses one of them. **Generate app** stays disabled until they're fixed.*
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/studio-files-dark.png">
+  <img alt="The Studio showing the invoices.send custom endpoint next to the file it generates, api/src/slots/sendInvoice.ts, with a typed input, the slot's intent as a comment, and an empty slot region" src="docs/screenshots/studio-files-light.png">
+</picture>
+
+*A custom endpoint and the slot file it generates: typed input, the intent as a
+comment, and a marked region waiting for the logic.*
 
 **Save** writes `specs/<name>.json`. **Generate app** writes the project to
 `out/<name>`.
